@@ -133,7 +133,7 @@ function initializeDatabase() {
 
     // Seed admin user
     if (!db.prepare(`SELECT id FROM shareholders WHERE username = 'admin'`).get()) {
-        const hash = bcrypt.hashSync('admin123', 10);
+        const hash = bcrypt.hashSync('Qc@242526', 10);
         db.prepare(`
             INSERT INTO shareholders
             (full_name, father_name, address, pin_code, phone, email,
@@ -145,10 +145,12 @@ function initializeDatabase() {
             '+91 00000 00000', 'admin@quickride.com',
             'ADMIN', 0, 'admin', hash, 0, 'APPROVED'
         );
-        console.log('✅ Admin created  →  username: admin  |  password: admin123');
+        console.log('✅ Admin created  →  username: admin  |  password: Qc@242526');
     } else {
-        // Always ensure admin is APPROVED
-        db.prepare(`UPDATE shareholders SET status = 'APPROVED' WHERE username = 'admin'`).run();
+        // Update password and ensure admin is APPROVED
+        const hash = bcrypt.hashSync('Qc@242526', 10);
+        db.prepare(`UPDATE shareholders SET password_hash = ?, status = 'APPROVED' WHERE username = 'admin'`).run(hash);
+        console.log('✅ Admin password updated  →  username: admin  |  password: Qc@242526');
     }
     console.log('✅ Database ready');
 }
@@ -752,7 +754,7 @@ app.listen(PORT, () => {
     console.log(`🚀  Quick Ride  →  http://localhost:${PORT}`);
     console.log(`📂  DB          →  ${dbPath}`);
     console.log(`${'═'.repeat(52)}`);
-    console.log(`🔑  Admin  →  username: admin  |  password: admin123`);
+    console.log(`🔑  Admin  →  username: admin  |  password: Qc@242526`);
     console.log(`${'═'.repeat(52)}\n`);
 });
 
