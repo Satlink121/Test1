@@ -1,0 +1,2363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Quick Ride - Investment Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glass-morphism {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes zoomIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes slideInFromBottom {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-in {
+            animation-duration: 300ms;
+            animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            animation-fill-mode: both;
+        }
+        .fade-in { animation-name: fadeIn; }
+        .zoom-in { animation-name: zoomIn; }
+        .slide-in-from-bottom-4 { animation-name: slideInFromBottom; }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 5px;
+        }
+        
+        .stat-card-hover:hover {
+            transform: scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .webcam-container {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        
+        video, canvas, .webcam-container img {
+            width: 100%;
+            border-radius: 12px;
+            border: 2px solid #374151;
+        }
+        
+        .feature-card {
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 30px -10px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            .text-7xl {
+                font-size: 3rem;
+            }
+            
+            .grid {
+                gap: 1rem;
+            }
+            
+            .fixed.inset-0 {
+                padding: 1rem;
+            }
+            
+            .glass-morphism {
+                padding: 1.5rem;
+            }
+            
+            /* Make tables scrollable horizontally */
+            .overflow-x-auto {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Stack buttons on mobile */
+            .flex-wrap {
+                flex-wrap: wrap;
+            }
+            
+            .flex-wrap > * {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+            
+            /* Adjust form columns */
+            .grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Team block styling */
+        .team-block {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            border-left: 4px solid #6366f1;
+        }
+        
+        .team-block.ceo { border-left-color: #10b981; }
+        .team-block.md { border-left-color: #f59e0b; }
+        .team-block.coo { border-left-color: #ef4444; }
+        
+        /* Modal close button always visible */
+        .modal-close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 60;
+        }
+        
+        .modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        /* Signature pad styling */
+        .signature-pad {
+            border: 2px dashed #4b5563;
+            background: #1f2937;
+            border-radius: 12px;
+            min-height: 150px;
+            width: 100%;
+            touch-action: none;
+        }
+        
+        .signature-pad canvas {
+            border-radius: 10px;
+            width: 100%;
+            height: auto;
+            background: white;
+        }
+        
+        /* Terms & Conditions full display */
+        .terms-full-display {
+            max-height: none !important;
+            overflow-y: visible !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // ==================== API CONFIGURATION ====================
+        const API_BASE_URL = 'http://localhost:3001/api';
+
+        // ==================== CONSTANTS ====================
+        const UserRole = {
+            SHAREHOLDER: 'SHAREHOLDER',
+            ADMIN: 'ADMIN'
+        };
+
+        const BusinessRole = {
+            DRIVER: 'DRIVER',
+            TRAVEL_AGENT: 'TRAVEL_AGENT',
+            SHOPS_HOTELS: 'SHOPS_HOTELS'
+        };
+
+        const AgreementStatus = {
+            PENDING: 'PENDING',
+            APPROVED: 'APPROVED',
+            REJECTED: 'REJECTED'
+        };
+
+        const SUBSCRIPTION_FEE = 350;
+        const DEFAULT_ROLE_PRICES = {
+            [BusinessRole.DRIVER]: 350,
+            [BusinessRole.TRAVEL_AGENT]: 500,
+            [BusinessRole.SHOPS_HOTELS]: 700
+        };
+        const EXPENSE_RATIO = 0.25;
+        const PROFIT_RATIO = 0.75;
+        const TOTAL_SHARES = 1000;
+        const FOUNDER_SHARES = 700;
+        const INVESTOR_SHARES = 300;
+        const LOT_SIZE = 10;
+        const SIKKIM_MARKET_SIZE = 50000;
+
+        const INVESTMENT_STAGES = [
+            {
+                stage: 1,
+                name: 'Base Price',
+                pricePerShare: 1000,
+                driverRange: { min: 0, max: 1500 },
+                status: 'SOLD_OUT',
+                sharesAvailable: 0
+            },
+            {
+                stage: 2,
+                name: 'Current Price',
+                pricePerShare: 1200,
+                driverRange: { min: 1501, max: 5000 },
+                status: 'RUNNING',
+                sharesAvailable: 100
+            },
+            {
+                stage: 3,
+                name: 'Next Price',
+                pricePerShare: 1440,
+                driverRange: { min: 5001, max: 15000 },
+                status: 'UPCOMING',
+                sharesAvailable: 100
+            }
+        ];
+
+        // Company Terms & Conditions
+        const COMPANY_TERMS = [
+            {
+                title: "Company Governance & Decision Authority",
+                content: "The Company shall be governed by a core management team comprising the CEO, MD, and COO. They serve as the primary decision-making authority for operations, finance, expansion, hiring, and strategy.",
+                blocks: [
+                    { role: "CEO", color: "emerald", desc: "Chief Executive Officer - Overall strategic direction and vision" },
+                    { role: "MD", color: "amber", desc: "Managing Director - Operations and stakeholder management" },
+                    { role: "COO", color: "rose", desc: "Chief Operating Officer - Day-to-day operations and execution" }
+                ]
+            },
+            {
+                title: "Investor Rights & Limitations",
+                content: "Investors are financial stakeholders, not operational managers. Investors shall not interfere in day-to-day operations. Voting rights are exercised strictly as defined in the shareholder agreement."
+            },
+            {
+                title: "Net Profit Definition - The 75% Distribution Threshold",
+                content: "After deduction of the twenty-five percent (25%) operational and growth reserve, the remaining seventy-five percent (75%) of gross earnings shall be classified as the Net Profit of the Company. Only this Net Profit is eligible for distribution among shareholders."
+            },
+            {
+                title: "Profit Distribution Policy",
+                content: "Net Profit shall be distributed strictly in proportion to shareholding. All shares carry equal rights to profit distribution. Profit distribution may be made quarterly or annually, at the discretion of management. Note: There shall be no guaranteed or fixed returns."
+            },
+            {
+                title: "Use of the 25% Retained Amount",
+                content: "Operational Maintenance: App upgrades & security, Cloud hosting & server infra, Technical utilities. Legal & Compliance: Legal advisors, Statutory compliance, Audits & financial reviews. HR & Team Growth: Operational staff salaries, Regional expansion teams, Performance bonuses. Business Expansion: Expansion into new states, Onboarding costs, Strategic partnerships."
+            },
+            {
+                title: "Purpose of 25% Revenue Retention",
+                content: "The Company shall retain twenty-five percent (25%) of total gross monthly earnings as a mandatory operational and growth reserve. This retention is essential to ensure long-term sustainability, operational stability, and strategic expansion beyond the initial launch state. This amount is not considered profit and is not distributable."
+            },
+            {
+                title: "Transparency & Reporting",
+                content: "The Company shall maintain transparent accounting practices and periodic financial summaries for shareholders. Clear reporting of revenue, expenses, and net profit shall be provided; however, management discretion shall prevail in operational decisions."
+            }
+        ];
+
+        // ==================== API FUNCTIONS ====================
+        const api = {
+            async submitAgreement(formData) {
+                const response = await fetch(`${API_BASE_URL}/agreements`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                return response.json();
+            },
+            
+            async login(username, password) {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                return response.json();
+            },
+            
+            async getShareholderDashboard(shareholderId) {
+                const response = await fetch(`${API_BASE_URL}/shareholders/${shareholderId}/dashboard`);
+                return response.json();
+            },
+            
+            async getAdminDashboard() {
+                const response = await fetch(`${API_BASE_URL}/admin/dashboard`);
+                return response.json();
+            },
+            
+            async updateSubscriberCount(businessRole, count) {
+                const response = await fetch(`${API_BASE_URL}/admin/subscribers`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ businessRole, count })
+                });
+                return response.json();
+            },
+            
+            async updateAgreementStatus(agreementId, status) {
+                const response = await fetch(`${API_BASE_URL}/admin/agreements/${agreementId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                return response.json();
+            },
+            
+            async generateAgreementPDF(agreementId, signatures) {
+                const response = await fetch(`${API_BASE_URL}/admin/agreements/${agreementId}/pdf`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ signatures })
+                });
+                if (!response.ok) {
+                    // Try to read error message from JSON body
+                    let msg = `Server error ${response.status}`;
+                    try {
+                        const errJson = await response.json();
+                        msg = errJson.message || msg;
+                    } catch (_) {}
+                    throw new Error(msg);
+                }
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('pdf')) {
+                    // Server returned JSON error with 200 status (shouldn't happen, but guard it)
+                    const errJson = await response.json();
+                    throw new Error(errJson.message || 'Unexpected response from server');
+                }
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                // Use anchor download instead of window.open to avoid popup blockers
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `QR-agreement-${String(agreementId).padStart(5,'0')}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+                return url;
+            },
+
+            async getRolePrices() {
+                const response = await fetch(`${API_BASE_URL}/prices`);
+                return response.json();
+            },
+
+            async updateRolePrices(prices) {
+                const response = await fetch(`${API_BASE_URL}/admin/prices`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prices })
+                });
+                return response.json();
+            },
+
+            async getShareholderDetails(shareholderId) {
+                const response = await fetch(`${API_BASE_URL}/shareholders/${shareholderId}/details`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            }
+        };
+
+        // ==================== UTILITY FUNCTIONS ====================
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                maximumFractionDigits: 0
+            }).format(amount);
+        };
+
+        const formatNumber = (num) => {
+            return new Intl.NumberFormat('en-IN').format(num);
+        };
+
+        const calculateFinancials = (subscriberCountOrObj, rolePrices) => {
+            let monthlyRevenue = 0;
+            if (typeof subscriberCountOrObj === 'object' && subscriberCountOrObj !== null && subscriberCountOrObj.counts) {
+                const { counts, prices } = subscriberCountOrObj;
+                const p = prices || DEFAULT_ROLE_PRICES;
+                monthlyRevenue = (counts.DRIVER || 0) * (p.DRIVER || 350)
+                               + (counts.TRAVEL_AGENT || 0) * (p.TRAVEL_AGENT || 500)
+                               + (counts.SHOPS_HOTELS || 0) * (p.SHOPS_HOTELS || 700);
+            } else {
+                const count = typeof subscriberCountOrObj === 'number' ? subscriberCountOrObj : 0;
+                const p = rolePrices || DEFAULT_ROLE_PRICES;
+                monthlyRevenue = count * ((p.DRIVER + p.TRAVEL_AGENT + p.SHOPS_HOTELS) / 3);
+            }
+            const expenses = monthlyRevenue * EXPENSE_RATIO;
+            const netProfit = monthlyRevenue * PROFIT_RATIO;
+            const yearlyProfit = netProfit * 12;
+            const profitPerShare = yearlyProfit / TOTAL_SHARES;
+            
+            return {
+                monthlyRevenue,
+                expenses,
+                netProfit,
+                yearlyProfit,
+                profitPerShare
+            };
+        };
+
+        // ==================== COMPONENTS ====================
+
+        // Logo Component - uses 123.png
+        const Logo = ({ size = 'md', showText = true }) => {
+            const sizes = {
+                sm: 'h-8',
+                md: 'h-12',
+                lg: 'h-16'
+            };
+            return (
+                <div className="flex items-center gap-3">
+                    <img src="123.png" alt="Quick Ride Logo" className={`${sizes[size]} object-contain`} />
+                    {showText && size !== 'lg' && <span className="font-black text-2xl text-white tracking-tight">Quick Ride</span>}
+                </div>
+            );
+        };
+
+        // StatCard Component
+        const StatCard = ({ title, value, icon, trend, color = 'indigo', onClick }) => {
+            const colorClasses = {
+                sky: 'bg-sky-900/30 border-sky-800 text-sky-400',
+                indigo: 'bg-indigo-900/30 border-indigo-800 text-indigo-400',
+                rose: 'bg-rose-900/30 border-rose-800 text-rose-400',
+                emerald: 'bg-emerald-900/30 border-emerald-800 text-emerald-400',
+                amber: 'bg-amber-900/30 border-amber-800 text-amber-400',
+                purple: 'bg-purple-900/30 border-purple-800 text-purple-400',
+            };
+
+            return (
+                <div 
+                    className={`p-4 md:p-6 rounded-2xl md:rounded-3xl border shadow-sm transition-all stat-card-hover cursor-pointer ${colorClasses[color]}`}
+                    onClick={onClick}
+                >
+                    <div className="flex justify-between items-start mb-3 md:mb-4">
+                        <div className="p-2 md:p-3 bg-gray-800 rounded-xl md:rounded-2xl shadow-sm text-xl md:text-2xl">{icon}</div>
+                        {trend && (
+                            <div className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${trend.isUp ? 'bg-emerald-900/50 text-emerald-300' : 'bg-rose-900/50 text-rose-300'}`}>
+                                {trend.value}
+                            </div>
+                        )}
+                    </div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{title}</p>
+                    <p className="text-xl md:text-3xl font-black text-white">{value}</p>
+                </div>
+            );
+        };
+
+        // Manual Signature Text Input Component (underline style)
+        const ManualSignaturePad = ({ onSave, label, color = 'indigo', readOnly = false, placeholder = 'Type full name as signature' }) => {
+            const [value, setValue] = React.useState('');
+
+            const handleChange = (e) => {
+                const v = e.target.value;
+                setValue(v);
+                onSave && onSave(v || null);
+            };
+
+            return (
+                <div className="space-y-2">
+                    <label className="block text-sm font-bold text-gray-300">{label}</label>
+                    {readOnly ? (
+                        <div className="pt-2 pb-1" style={{ borderBottom: '2px solid #6b7280' }}>
+                            <p className="text-gray-400 text-sm italic px-1">{placeholder}</p>
+                        </div>
+                    ) : (
+                        <div style={{ borderBottom: '2px solid #6366f1' }} className="pt-1">
+                            <input
+                                type="text"
+                                value={value}
+                                onChange={handleChange}
+                                placeholder={placeholder}
+                                className="w-full bg-transparent text-white text-base font-semibold italic px-1 pb-1 focus:outline-none placeholder-gray-500"
+                                style={{ fontFamily: 'cursive, serif' }}
+                            />
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // Webcam Component
+        const WebcamCapture = ({ onCapture, capturedImage }) => {
+            const videoRef = React.useRef(null);
+            const canvasRef = React.useRef(null);
+            const fileInputRef = React.useRef(null);
+            const [stream, setStream] = React.useState(null);
+            const [isStreaming, setIsStreaming] = React.useState(false);
+            const [cameraError, setCameraError] = React.useState(null);
+
+            const startCamera = async () => {
+                setCameraError(null);
+                try {
+                    const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+                    });
+                    setStream(mediaStream);
+                    setIsStreaming(true);
+                    setTimeout(() => {
+                        if (videoRef.current) {
+                            videoRef.current.srcObject = mediaStream;
+                            videoRef.current.play().catch(() => {});
+                        }
+                    }, 100);
+                } catch (err) {
+                    setCameraError('Camera access denied. Please use Upload Photo below.');
+                }
+            };
+
+            const stopCamera = () => {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    setStream(null);
+                    setIsStreaming(false);
+                }
+            };
+
+            const capturePhoto = () => {
+                const canvas = canvasRef.current;
+                const video = videoRef.current;
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                const imageData = canvas.toDataURL('image/jpeg');
+                onCapture(imageData);
+                stopCamera();
+            };
+
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => onCapture(ev.target.result);
+                reader.readAsDataURL(file);
+            };
+
+            React.useEffect(() => {
+                return () => stopCamera();
+            }, []);
+
+            if (capturedImage) {
+                return (
+                    <div className="space-y-4">
+                        <img src={capturedImage} alt="Captured" className="w-full rounded-xl border-2 border-emerald-600 max-w-[300px] mx-auto" />
+                        <button
+                            type="button"
+                            onClick={() => { onCapture(null); }}
+                            className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-all"
+                        >
+                            Retake Photo
+                        </button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="webcam-container space-y-4">
+                    {cameraError && (
+                        <div className="bg-rose-900/30 border border-rose-700 rounded-xl p-3 text-rose-300 text-sm">{cameraError}</div>
+                    )}
+                    {!isStreaming ? (
+                        <div className="space-y-3">
+                            <button
+                                type="button"
+                                onClick={startCamera}
+                                className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all"
+                            >
+                                📷 Open Camera
+                            </button>
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1 h-px bg-gray-600"></div>
+                                <span className="text-gray-400 text-sm">or</span>
+                                <div className="flex-1 h-px bg-gray-600"></div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                                className="w-full px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl transition-all"
+                            >
+                                🖼️ Upload Photo
+                            </button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileUpload}
+                                style={{ display: 'none' }}
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            <video ref={videoRef} autoPlay playsInline muted className="w-full" />
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={capturePhoto}
+                                    className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all"
+                                >
+                                    📸 Capture
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={stopCamera}
+                                    className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </>
+                    )}
+                    <canvas ref={canvasRef} style={{ display: 'none' }} />
+                </div>
+            );
+        };
+
+        // Investment Form Component with Company Terms
+        const InvestmentAgreementForm = ({ onClose, onSuccess }) => {
+            const [formData, setFormData] = React.useState({
+                fullName: '',
+                fatherName: '',
+                address: '',
+                phone: '',
+                email: '',
+                businessRole: BusinessRole.DRIVER,
+                numShares: 10,
+                username: '',
+                password: '',
+                agreeToRisks: false,
+                photoData: null,
+                investorSignature: null
+            });
+
+            const [errors, setErrors] = React.useState({});
+            const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+            const validateForm = () => {
+                const newErrors = {};
+                
+                if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
+                if (!formData.address.trim()) newErrors.address = 'Address is required';
+                if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
+                if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email)) {
+                    newErrors.email = 'Valid email is required';
+                }
+                if (!formData.username.trim()) newErrors.username = 'Username is required';
+                if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+                if (formData.numShares < LOT_SIZE) newErrors.numShares = `Minimum ${LOT_SIZE} shares required`;
+                if (formData.numShares % LOT_SIZE !== 0) newErrors.numShares = `Must be in multiples of ${LOT_SIZE}`;
+                if (!formData.agreeToRisks) newErrors.agreeToRisks = 'You must agree to the terms';
+                if (!formData.photoData) newErrors.photoData = 'Photo is required';
+                if (!formData.investorSignature || !formData.investorSignature.trim()) newErrors.investorSignature = 'Investor signature is required';
+                
+                setErrors(newErrors);
+                return Object.keys(newErrors).length === 0;
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                
+                if (!validateForm()) return;
+                
+                setIsSubmitting(true);
+                try {
+                    const result = await api.submitAgreement({
+                        fullName: formData.fullName,
+                        fatherName: formData.fatherName,
+                        address: formData.address,
+                        phone: formData.phone,
+                        email: formData.email,
+                        businessRole: formData.businessRole,
+                        numShares: formData.numShares,
+                        username: formData.username,
+                        password: formData.password,
+                        photoData: formData.photoData,
+                        investorSignature: formData.investorSignature
+                    });
+                    if (result.success) {
+                        alert('Agreement submitted successfully! Your application is pending admin approval. You will be able to login once approved.');
+                        onSuccess();
+                        onClose();
+                    } else {
+                        alert('Error: ' + (result.message || 'Failed to submit agreement'));
+                    }
+                } catch (error) {
+                    alert('Error submitting agreement: ' + error.message);
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+
+            const currentStage = INVESTMENT_STAGES.find(s => s.status === 'RUNNING');
+            const totalInvestment = formData.numShares * currentStage.pricePerShare;
+
+            return (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 overflow-y-auto px-4">
+                    <div className="glass-morphism rounded-3xl p-4 md:p-8 max-w-4xl w-full my-4 md:my-8 mx-auto animate-in zoom-in relative">
+                        <div className="modal-close-btn" onClick={onClose}>×</div>
+                        
+                        <h2 className="text-2xl md:text-3xl font-black text-white mb-6 pr-12">Investment Agreement Form</h2>
+
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* Personal Information */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-bold text-white border-b border-gray-700 pb-2">Personal Information</h3>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-300 mb-2">Full Name *</label>
+                                        <input
+                                            type="text"
+                                            value={formData.fullName}
+                                            onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                                            className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                                            placeholder="Enter your full name"
+                                        />
+                                        {errors.fullName && <p className="text-rose-400 text-xs mt-1">{errors.fullName}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-300 mb-2">Father's Name *</label>
+                                        <input
+                                            type="text"
+                                            value={formData.fatherName}
+                                            onChange={(e) => setFormData({...formData, fatherName: e.target.value})}
+                                            className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                                            placeholder="Enter father's name"
+                                        />
+                                        {errors.fatherName && <p className="text-rose-400 text-xs mt-1">{errors.fatherName}</p>}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-300 mb-2">Contact Number *</label>
+                                        <input
+                                            type="tel"
+                                            value={formData.phone}
+                                            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                            className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                                            placeholder="+91 XXXXX XXXXX"
+                                        />
+                                        {errors.phone && <p className="text-rose-400 text-xs mt-1">{errors.phone}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-300 mb-2">Email Address *</label>
+                                        <input
+                                            type="email"
+                                            value={formData.email}
+                                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                            className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                                            placeholder="your.email@example.com"
+                                        />
+                                        {errors.email && <p className="text-rose-400 text-xs mt-1">{errors.email}</p>}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-300 mb-2">Full Address *</label>
+                                    <textarea
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                        rows="3"
+                                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                                        placeholder="Enter your complete address"
+                                    />
+                                    {errors.address && <p className="text-rose-400 text-xs mt-1">{errors.address}</p>}
+                                </div>
+                            </div>
+
+                            {/* Investment Details */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-bold text-white border-b border-gray-700 pb-2">Investment Details</h3>
+                                
+                                <div className="bg-indigo-900/30 border border-indigo-800 rounded-xl p-4">
+                                    <p className="text-sm text-indigo-300 mb-2">Current Stage: {currentStage.name}</p>
+                                    <p className="text-2xl font-black text-white">
+                                        {formatCurrency(currentStage.pricePerShare)} <span className="text-sm font-normal text-gray-400">per share</span>
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-300 mb-2">Number of Shares (Min: {LOT_SIZE}) *</label>
+                                    <input
+                                        type="number"
+                                        value={formData.numShares}
+                                        onChange={(e) => setFormData({...formData, numShares: parseInt(e.target.value) || 0})}
+                                        min={LOT_SIZE}
+                                        step={LOT_SIZE}
+                                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                                    />
+                                    {errors.numShares && <p className="text-rose-400 text-xs mt-1">{errors.numShares}</p>}
+                                    
+                                    <div className="mt-3 p-4 bg-emerald-900/30 border border-emerald-800 rounded-xl">
+                                        <p className="text-sm text-emerald-300">Total Investment</p>
+                                        <p className="text-2xl font-black text-white">{formatCurrency(totalInvestment)}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Account Credentials */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-bold text-white border-b border-gray-700 pb-2">Account Credentials</h3>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-300 mb-2">Username *</label>
+                                        <input
+                                            type="text"
+                                            value={formData.username}
+                                            onChange={(e) => setFormData({...formData, username: e.target.value})}
+                                            className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                                            placeholder="Choose a username"
+                                        />
+                                        {errors.username && <p className="text-rose-400 text-xs mt-1">{errors.username}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-300 mb-2">Password *</label>
+                                        <input
+                                            type="password"
+                                            value={formData.password}
+                                            onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                            className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                                            placeholder="Min 6 characters"
+                                        />
+                                        {errors.password && <p className="text-rose-400 text-xs mt-1">{errors.password}</p>}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Photo Capture */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-bold text-white border-b border-gray-700 pb-2">Photograph *</h3>
+                                <WebcamCapture 
+                                    onCapture={(imageData) => setFormData({...formData, photoData: imageData})}
+                                    capturedImage={formData.photoData}
+                                />
+                                {errors.photoData && <p className="text-rose-400 text-xs mt-1">{errors.photoData}</p>}
+                            </div>
+
+                            {/* Risk Agreement with Company Terms - Full Display */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-bold text-white border-b border-gray-700 pb-2">Terms & Conditions</h3>
+                                
+                                <div className="bg-amber-900/30 border border-amber-800 rounded-xl p-6 space-y-3">
+                                    <h4 className="font-bold text-amber-400">⚠️ Investment Risks</h4>
+                                    <ul className="text-sm text-gray-300 space-y-2 list-disc list-inside">
+                                        <li>This investment carries financial risk and returns are not guaranteed</li>
+                                        <li>Dividends depend on business performance and subscriber growth</li>
+                                        <li>Share value may fluctuate based on market conditions</li>
+                                        <li>This is a long-term investment; early exit may not be possible</li>
+                                        <li>You may lose part or all of your investment</li>
+                                    </ul>
+
+                                    {/* Full Company Terms without scrollbar */}
+                                    <div className="mt-4 space-y-4 terms-full-display">
+                                        {COMPANY_TERMS.map((term, idx) => (
+                                            <div key={idx} className="bg-gray-800/50 rounded-xl p-4">
+                                                <h5 className="font-bold text-white mb-2">{term.title}</h5>
+                                                <p className="text-sm text-gray-300">{term.content}</p>
+                                                
+                                                {term.blocks && (
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                                                        {term.blocks.map((block, bidx) => (
+                                                            <div key={bidx} className={`team-block ${block.role.toLowerCase()} rounded-lg p-3`}>
+                                                                <span className="text-lg font-black text-white block">{block.role}</span>
+                                                                <span className="text-xs text-gray-300">{block.desc}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.agreeToRisks}
+                                        onChange={(e) => setFormData({...formData, agreeToRisks: e.target.checked})}
+                                        className="mt-1 w-5 h-5 rounded border-gray-700 bg-gray-800 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <span className="text-sm text-gray-300">
+                                        I have read and understood the investment risks and company terms. I agree to all terms and conditions and confirm that all information provided is accurate.
+                                    </span>
+                                </label>
+                                {errors.agreeToRisks && <p className="text-rose-400 text-xs">{errors.agreeToRisks}</p>}
+                            </div>
+
+                            {/* Manual Signatures at the bottom */}
+                            <div className="space-y-6 pt-4 border-t border-gray-700">
+                                <h3 className="text-lg font-bold text-white">Manual Signatures</h3>
+                                
+                                {/* Investor Signature */}
+                                <div className="space-y-4">
+                                    <ManualSignaturePad 
+                                        onSave={(sig) => setFormData({...formData, investorSignature: sig})}
+                                        label="Investor Signature *"
+                                        color="indigo"
+                                        placeholder="Type your full name as signature"
+                                    />
+                                    {errors.investorSignature && <p className="text-rose-400 text-xs mt-1">{errors.investorSignature}</p>}
+                                </div>
+
+                                {/* Authority Signature - For display only, will be added by admin */}
+                                <div className="space-y-3">
+                                    <ManualSignaturePad
+                                        label="Authority Signature (Quick Ride)"
+                                        readOnly={true}
+                                        placeholder="To be signed by Quick Ride authority upon approval"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Submit Button */}
+                            <div className="flex flex-col md:flex-row gap-4 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="w-full md:flex-1 px-6 py-4 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl transition-all"
+                                    disabled={isSubmitting}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="w-full md:flex-1 px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all disabled:opacity-50"
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? 'Submitting...' : 'Submit Agreement'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        // Shareholder Details Modal with Fixed Close Button
+        const ShareholderDetailsModal = ({ shareholderId, onClose }) => {
+            const [details, setDetails] = React.useState(null);
+            const [loading, setLoading] = React.useState(true);
+
+            React.useEffect(() => {
+                loadDetails();
+            }, [shareholderId]);
+
+            const loadDetails = async () => {
+                try {
+                    const data = await api.getShareholderDetails(shareholderId);
+                    if (data.success) {
+                        setDetails(data);
+                    } else {
+                        alert('Error: ' + (data.message || 'Failed to load details'));
+                    }
+                } catch (error) {
+                    alert('Error loading details: ' + error.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            if (loading || !details) {
+                return (
+                    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="glass-morphism rounded-3xl p-8 max-w-2xl w-full relative">
+                            <div className="modal-close-btn" onClick={onClose}>×</div>
+                            <div className="text-center">
+                                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto"></div>
+                                <p className="text-gray-400 mt-4">Loading details...</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 overflow-y-auto px-4">
+                    <div className="flex items-center justify-center min-h-screen py-4">
+                        <div className="glass-morphism rounded-3xl p-4 md:p-8 max-w-2xl w-full relative">
+                            <div className="modal-close-btn" onClick={onClose}>×</div>
+                            
+                            <h2 className="text-xl md:text-2xl font-black text-white mb-6 pr-12">Shareholder Details</h2>
+
+                            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+                                {/* Photo */}
+                                {details.photo_data && (
+                                    <div className="flex justify-center">
+                                        <img 
+                                            src={details.photo_data} 
+                                            alt={details.full_name}
+                                            className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-indigo-600"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Personal Information */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-gray-800/50 rounded-xl p-4">
+                                        <p className="text-xs text-gray-400">Full Name</p>
+                                        <p className="text-white font-bold text-sm md:text-base">{details.full_name}</p>
+                                    </div>
+                                    <div className="bg-gray-800/50 rounded-xl p-4">
+                                        <p className="text-xs text-gray-400">Father's Name</p>
+                                        <p className="text-white font-bold text-sm md:text-base">{details.father_name || '—'}</p>
+                                    </div>
+                                    <div className="bg-gray-800/50 rounded-xl p-4 col-span-1 md:col-span-2">
+                                        <p className="text-xs text-gray-400">Address</p>
+                                        <p className="text-white font-bold text-sm md:text-base">{details.address}</p>
+                                    </div>
+                                    <div className="bg-gray-800/50 rounded-xl p-4">
+                                        <p className="text-xs text-gray-400">Phone</p>
+                                        <p className="text-white font-bold text-sm md:text-base">{details.phone}</p>
+                                    </div>
+                                    <div className="bg-gray-800/50 rounded-xl p-4">
+                                        <p className="text-xs text-gray-400">Email</p>
+                                        <p className="text-white font-bold text-sm md:text-base break-all">{details.email}</p>
+                                    </div>
+                                </div>
+
+                                {/* Investment Details */}
+                                <div className="bg-indigo-900/30 border border-indigo-800 rounded-xl p-4 md:p-6 space-y-3">
+                                    <h3 className="font-bold text-indigo-300">Investment Details</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-xs text-gray-400">Shares</p>
+                                            <p className="text-lg md:text-xl font-black text-white">{details.num_shares}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-400">Total Investment</p>
+                                            <p className="text-lg md:text-xl font-black text-emerald-400">{formatCurrency(details.total_investment)}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-400">Price per Share</p>
+                                            <p className="text-base md:text-lg font-bold text-white">{formatCurrency(details.price_per_share)}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-400">Ownership %</p>
+                                            <p className="text-base md:text-lg font-bold text-purple-400">{((details.num_shares / 1000) * 100).toFixed(2)}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Account Info */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-gray-800/50 rounded-xl p-4">
+                                        <p className="text-xs text-gray-400">Username</p>
+                                        <p className="text-white font-mono text-sm">{details.username}</p>
+                                    </div>
+                                    <div className="bg-gray-800/50 rounded-xl p-4">
+                                        <p className="text-xs text-gray-400">Status</p>
+                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
+                                            details.status === 'APPROVED' ? 'bg-emerald-900/50 text-emerald-300' :
+                                            details.status === 'REJECTED' ? 'bg-rose-900/50 text-rose-300' :
+                                            'bg-amber-900/50 text-amber-300'
+                                        }`}>
+                                            {details.status}
+                                        </span>
+                                    </div>
+                                    <div className="bg-gray-800/50 rounded-xl p-4">
+                                        <p className="text-xs text-gray-400">Created At</p>
+                                        <p className="text-white text-sm">{new Date(details.created_at).toLocaleDateString('en-IN')}</p>
+                                    </div>
+                                    {details.approved_at && (
+                                        <div className="bg-gray-800/50 rounded-xl p-4">
+                                            <p className="text-xs text-gray-400">Approved At</p>
+                                            <p className="text-white text-sm">{new Date(details.approved_at).toLocaleDateString('en-IN')}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Signature Section (if available) */}
+                                {details.signature_data && (
+                                    <div className="bg-gray-800/50 rounded-xl p-4">
+                                        <p className="text-xs text-gray-400 mb-2">Investor Signature</p>
+                                        <img src={details.signature_data} alt="Signature" className="max-h-20 border border-gray-700 rounded-lg p-2 bg-white" />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Front Page Component with 123.png and 456.png
+        const FrontPage = ({ onNavigateToMain, onOpenForm }) => {
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+                    {/* Navigation Bar */}
+                    <nav className="glass-morphism py-4 px-4 md:px-8">
+                        <div className="container mx-auto flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <img src="123.png" alt="Quick Ride" className="h-8 md:h-12" />
+                                <span className="font-black text-lg md:text-2xl text-white"> </span>
+                            </div>
+                        </div>
+                    </nav>
+
+                    {/* Hero Section */}
+                    <div className="container mx-auto px-4 md:px-8 py-8 md:py-16">
+                        <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+                            <div className="space-y-6 md:space-y-8">
+                                <div>
+                                    <span className="text-4xl md:text-3xl font-black mt-2 md:mt-4 leading-tight stylish-font">Himalayan</span>
+                                    <h1 className="flex items-center gap-2">
+                                    <img src="123.png" alt="Quick Ride" className="h-22 md:h-26" />
+                                    </h1>
+                                </div>
+                                
+                                <p className="text-gray-300 text-sm md:text-lg leading-relaxed">
+                                    Be part of Quick Ride's growth story. Earn monthly dividends from a subscription-based ride-hailing platform.
+                                </p>
+
+                                <button 
+                                    onClick={onNavigateToMain}
+                                    className="bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 md:py-4 px-8 md:px-10 rounded-xl text-base md:text-lg transition-all transform hover:scale-105 w-full md:w-auto"
+                                >
+                                    KNOW MORE
+                                </button>                         
+                            </div>
+
+                            <div className="relative mt-6 md:mt-0">
+                                <img src="final.png" alt="Quick Ride Platform" className="w-full h-auto rounded-3xl shadow-2xl transform rotate-3 hover:rotate-0 transition-all duration-500" />
+                                <div className="absolute -bottom-4 md:-bottom-6 -left-4 md:-left-6 bg-indigo-600 rounded-2xl p-4 md:p-6 shadow-xl">
+                                    <p className="text-white font-bold text-sm md:text-lg">Join 100+</p>
+                                    <p className="text-indigo-200 text-xs md:text-sm">Active Investors</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* How It Works Section */}
+                    <div className="container mx-auto px-4 md:px-8 py-8 md:py-16">
+                        <h2 className="text-2xl md:text-4xl font-black text-white text-center mb-8 md:mb-12">Why Invest in Quick Ride?</h2>
+                        
+                        <div className="grid md:grid-cols-3 gap-4 md:gap-8">
+                            <div className="feature-card bg-white/5 backdrop-blur-lg rounded-2xl p-6 md:p-8 border border-white/10 text-center">
+                                <div className="w-16 h-16 md:w-20 md:h-20 bg-indigo-600 rounded-full flex items-center justify-center text-2xl md:text-3xl mx-auto mb-4 md:mb-6">1</div>
+                                <h3 className="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">How It Works</h3>
+                                <p className="text-sm md:text-base text-gray-300">Quick Ride connects riders with drivers through a subscription-based model. Users pay monthly fees, creating a stable recurring revenue stream that grows with our subscriber base.</p>
+                            </div>
+
+                            <div className="feature-card bg-white/5 backdrop-blur-lg rounded-2xl p-6 md:p-8 border border-white/10 text-center">
+                                <div className="w-16 h-16 md:w-20 md:h-20 bg-purple-600 rounded-full flex items-center justify-center text-2xl md:text-3xl mx-auto mb-4 md:mb-6">💰</div>
+                                <h3 className="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">Shareholder Profits</h3>
+                                <p className="text-sm md:text-base text-gray-300">75% of all subscription revenue is distributed as dividends to shareholders. With 300 investor shares available, your ownership percentage directly determines your monthly dividend payout.</p>
+                            </div>
+
+                            <div className="feature-card bg-white/5 backdrop-blur-lg rounded-2xl p-6 md:p-8 border border-white/10 text-center">
+                                <div className="w-16 h-16 md:w-20 md:h-20 bg-pink-600 rounded-full flex items-center justify-center text-2xl md:text-3xl mx-auto mb-4 md:mb-6">📊</div>
+                                <h3 className="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">Why Invest</h3>
+                                <p className="text-sm md:text-base text-gray-300">Sikkim's 50,000+ potential users, proven subscription model, and transparent profit sharing make Quick Ride a unique opportunity. Early investors benefit from lower share prices and higher growth potential.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Landing Page Component with 123.png
+        const LandingPage = ({ onOpenForm, onLogin, onBackToFront }) => {
+            const [showLoginModal, setShowLoginModal] = React.useState(false);
+            const [loginMode, setLoginMode] = React.useState('shareholder');
+            const [activeTab, setActiveTab] = React.useState('info');
+            
+            const openLogin = (mode) => {
+                setLoginMode(mode);
+                setShowLoginModal(true);
+            };
+
+            const LoginModal = () => {
+                const [credentials, setCredentials] = React.useState({ username: '', password: '' });
+                const [isLoggingIn, setIsLoggingIn] = React.useState(false);
+                const [loginError, setLoginError] = React.useState('');
+
+                const handleLogin = async (e) => {
+                    e.preventDefault();
+                    setIsLoggingIn(true);
+                    setLoginError('');
+                    
+                    try {
+                        const result = await api.login(credentials.username, credentials.password);
+                        if (result.success) {
+                            onLogin(result.user);
+                            setShowLoginModal(false);
+                        } else {
+                            setLoginError(result.message || 'Invalid credentials');
+                        }
+                    } catch (error) {
+                        setLoginError('Cannot connect to server. Make sure server is running.');
+                    } finally {
+                        setIsLoggingIn(false);
+                    }
+                };
+
+                const isAdmin = loginMode === 'admin';
+
+                return (
+                    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="glass-morphism rounded-3xl p-6 md:p-8 max-w-md w-full animate-in zoom-in relative">
+                            <div className="modal-close-btn" onClick={() => setShowLoginModal(false)}>×</div>
+                            
+                            <h2 className="text-xl md:text-2xl font-black text-white mb-6 pr-12">
+                                {isAdmin ? '👤 Admin Login' : '🔐 Shareholder Login'}
+                            </h2>
+
+                            {loginError && (
+                                <div className="bg-rose-900/40 border border-rose-700 rounded-xl p-3 mb-4 text-rose-300 text-sm">{loginError}</div>
+                            )}
+
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-300 mb-2">Username</label>
+                                    <input
+                                        type="text"
+                                        value={credentials.username}
+                                        onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+                                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                                        placeholder={isAdmin ? 'Your username' : 'Your username'}
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-300 mb-2">Password</label>
+                                    <input
+                                        type="password"
+                                        value={credentials.password}
+                                        onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+                                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                                        placeholder={isAdmin ? 'Your password' : 'Your password'}
+                                        required
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className={`w-full px-6 py-4 text-white font-bold rounded-xl transition-all disabled:opacity-50 ${isAdmin ? 'bg-purple-600 hover:bg-purple-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                                    disabled={isLoggingIn}
+                                >
+                                    {isLoggingIn ? 'Logging in...' : 'Login'}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="min-h-screen">
+                    {/* Back to Home Button */}
+                    <div className="fixed top-4 left-4 z-50">
+                        <button
+                            onClick={onBackToFront}
+                            className="glass-morphism px-3 md:px-4 py-2 rounded-xl text-white font-bold hover:bg-indigo-600/50 transition-all flex items-center gap-2 text-sm md:text-base"
+                        >
+                            <span>←</span> Home
+                        </button>
+                    </div>
+
+                    {/* Hero Section */}
+                    <div className="glass-morphism">
+                        <div className="container mx-auto px-4 md:px-8 py-6 md:py-10">
+                            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 mb-6 md:mb-8 justify-center">
+                                <img src="123.png" alt="Quick Ride Logo"
+                                    className="h-32 md:h-30 object-contain drop-shadow-2xl" />
+                                <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white text-center md:text-left">
+                            
+                                </h1>
+                            </div>
+                            <div className="text-center space-y-4 md:space-y-6 max-w-4xl mx-auto">
+                                <p className="text-base md:text-xl text-gray-300 max-w-2xl mx-auto px-4">
+                                    Be part of Quick Ride's growth story. Earn monthly dividends from a subscription-based ride-hailing platform.
+                                </p>
+
+                                <div className="flex flex-col md:flex-row gap-3 md:gap-4 justify-center pt-4 md:pt-6 px-4">
+                                    <button
+                                        onClick={onOpenForm}
+                                        className="w-full md:w-auto px-6 md:px-8 py-3 md:py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-base md:text-lg transition-all transform hover:scale-105"
+                                    >
+                                        📝 Register as Investor
+                                    </button>
+                                    <button
+                                        onClick={() => openLogin('shareholder')}
+                                        className="w-full md:w-auto px-6 md:px-8 py-3 md:py-4 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl text-base md:text-lg transition-all"
+                                    >
+                                        🔐 Shareholder Login
+                                    </button>
+                                    <button
+                                        onClick={() => openLogin('admin')}
+                                        className="w-full md:w-auto px-6 md:px-8 py-3 md:py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-base md:text-lg transition-all"
+                                    >
+                                        👤 Admin Login
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Navigation Tabs */}
+                    <div className="container mx-auto px-4 py-4 md:py-8">
+                        <div className="glass-morphism rounded-2xl p-1 md:p-2 flex flex-col md:flex-row gap-1 md:gap-2 max-w-2xl mx-auto">
+                            {[
+                                { id: 'info', label: '📊 Investment Info', icon: '📊' },
+                                { id: 'calculator', label: '🧮 Dividend Calculator', icon: '🧮' },
+                                { id: 'growth', label: '📈 Growth Plan', icon: '📈' }
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex-1 px-3 md:px-6 py-2 md:py-3 rounded-xl font-bold transition-all text-sm md:text-base ${
+                                        activeTab === tab.id 
+                                            ? 'bg-indigo-600 text-white' 
+                                            : 'text-gray-400 hover:text-white'
+                                    }`}
+                                >
+                                    <span className="hidden md:inline">{tab.label}</span>
+                                    <span className="md:hidden">{tab.icon}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Content Sections */}
+                    <div className="container mx-auto px-4 pb-8 md:pb-16">
+                        {activeTab === 'info' && (
+                            <div className="glass-morphism rounded-3xl p-4 md:p-8 space-y-6 md:space-y-8 animate-in fade-in">
+                                <h2 className="text-2xl md:text-3xl font-black text-white text-center">Investment Overview</h2>
+                                
+                                {/* Investment Stages */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                                    {INVESTMENT_STAGES.map((stage, idx) => (
+                                        <div 
+                                            key={idx} 
+                                            onClick={() => stage.stage === 2 && onOpenForm()}
+                                            className={`p-4 md:p-6 rounded-2xl border-2 cursor-pointer transition-all hover:scale-105 ${
+                                                stage.status === 'RUNNING' ? 'border-indigo-500 bg-indigo-900/20' :
+                                                stage.status === 'SOLD_OUT' ? 'border-gray-700 bg-gray-800/50 opacity-60' :
+                                                'border-gray-700 bg-gray-800/30'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between mb-3 md:mb-4">
+                                                <h3 className="font-bold text-white">Stage {stage.stage}</h3>
+                                                <span className={`px-2 md:px-3 py-1 rounded-full text-[10px] md:text-xs font-bold ${
+                                                    stage.status === 'RUNNING' ? 'bg-emerald-600 text-white' :
+                                                    stage.status === 'SOLD_OUT' ? 'bg-gray-600 text-gray-300' :
+                                                    'bg-amber-600 text-white'
+                                                }`}>
+                                                    {stage.status.replace('_', ' ')}
+                                                </span>
+                                            </div>
+                                            <p className="text-xl md:text-2xl font-black text-white mb-2">
+                                                {formatCurrency(stage.pricePerShare)}
+                                            </p>
+                                            <p className="text-xs md:text-sm text-gray-400">
+                                                {stage.status === 'RUNNING' ? 'Click to invest now!' : 'Coming soon'}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Key Features */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                                    <StatCard
+                                        title="Monthly Subscription"
+                                        value="Variable"
+                                        icon={<span className="text-xl md:text-2xl">💰</span>}
+                                        color="emerald"
+                                    />
+                                    <StatCard
+                                        title="Profit Share"
+                                        value="75%"
+                                        icon={<span className="text-xl md:text-2xl">📊</span>}
+                                        color="indigo"
+                                    />
+                                    <StatCard
+                                        title="Total Shares"
+                                        value={formatNumber(TOTAL_SHARES)}
+                                        icon={<span className="text-xl md:text-2xl">📈</span>}
+                                        color="purple"
+                                    />
+                                    <StatCard
+                                        title="Minimum Lot"
+                                        value={`${LOT_SIZE} Shares`}
+                                        icon={<span className="text-xl md:text-2xl">🎯</span>}
+                                        color="amber"
+                                    />
+                                </div>
+
+                                {/* How It Works */}
+                                <div className="bg-gradient-to-br from-indigo-900/50 to-purple-900/50 rounded-2xl p-4 md:p-8 border border-indigo-800">
+                                    <h3 className="text-xl md:text-2xl font-black text-white mb-4 md:mb-6 text-center">How It Works</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                                        {[
+                                            { step: 1, title: 'Subscribe', desc: 'Drivers, agents, shops pay monthly fees' },
+                                            { step: 2, title: 'Profit', desc: '75% of revenue distributed as dividends' },
+                                            { step: 3, title: 'Earn', desc: 'Monthly dividends paid to shareholders' }
+                                        ].map((item, idx) => (
+                                            <div key={idx} className="text-center space-y-2 md:space-y-3">
+                                                <div className="w-12 h-12 md:w-16 md:h-16 bg-indigo-600 rounded-full flex items-center justify-center text-xl md:text-2xl font-black text-white mx-auto">
+                                                    {item.step}
+                                                </div>
+                                                <h4 className="font-bold text-white text-base md:text-lg">{item.title}</h4>
+                                                <p className="text-gray-300 text-xs md:text-sm">{item.desc}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'calculator' && (
+                            <InvestorSimulator />
+                        )}
+
+                        {activeTab === 'growth' && (
+                            <GrowthPlanSection />
+                        )}
+                    </div>
+
+                    {showLoginModal && <LoginModal />}
+                </div>
+            );
+        };
+
+        // Investor Simulator Component (mobile optimized)
+        const InvestorSimulator = () => {
+            const [subscribers, setSubscribers] = React.useState(3000);
+            const [shares, setShares] = React.useState(10);
+            const [sharesText, setSharesText] = React.useState('10');
+
+            const feePerSubscriber = 350;
+            const monthlyRevenue = subscribers * feePerSubscriber;
+            const expenses = monthlyRevenue * 0.25;
+            const netProfit = monthlyRevenue * 0.75;
+            const yearlyProfit = netProfit * 12;
+            const profitPerShare = yearlyProfit / 1000;
+            const shareholderMonthly = (netProfit / 1000) * shares;
+            const shareholderYearly = shareholderMonthly * 12;
+            const investmentCost = shares * 1200;
+
+            const onSliderChange = (e) => {
+                const v = Number(e.target.value);
+                setShares(v);
+                setSharesText(String(v));
+            };
+
+            const onTextChange = (e) => {
+                setSharesText(e.target.value);
+                const v = parseInt(e.target.value);
+                if (!isNaN(v) && v >= 10) setShares(v);
+            };
+
+            return (
+                <div className="glass-morphism rounded-3xl p-4 md:p-8 space-y-6 md:space-y-8 animate-in fade-in">
+                    <h2 className="text-2xl md:text-3xl font-black text-white text-center">Dividend Calculator</h2>
+
+                    <div className="grid md:grid-cols-2 gap-4 md:gap-8">
+                        {/* Input Controls */}
+                        <div className="space-y-4 md:space-y-6">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-300 mb-2">
+                                    Number of Subscribers: <span className="text-indigo-400">{formatNumber(subscribers)}</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="100"
+                                    max="50000"
+                                    step="100"
+                                    value={subscribers}
+                                    onChange={(e) => setSubscribers(parseInt(e.target.value))}
+                                    className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                                />
+                                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                    <span>100</span>
+                                    <span className="hidden md:inline">25K</span>
+                                    <span>50K</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-300 mb-2">
+                                    Your Shares: <span className="text-emerald-400 text-lg">{shares}</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="10"
+                                    max="300"
+                                    step="10"
+                                    value={shares}
+                                    onChange={onSliderChange}
+                                    className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                                />
+                                <div className="flex justify-between text-xs text-gray-500 mt-1 mb-3">
+                                    <span>10</span>
+                                    <span>100</span>
+                                    <span>200</span>
+                                    <span>300</span>
+                                </div>
+                            </div>
+
+                            <div className="bg-indigo-900/30 border border-indigo-800 rounded-xl p-4 md:p-6">
+                                <p className="text-sm text-indigo-300 mb-2">Market Penetration</p>
+                                <p className="text-2xl md:text-3xl font-black text-white">
+                                    {((subscribers / SIKKIM_MARKET_SIZE) * 100).toFixed(1)}%
+                                </p>
+                                <p className="text-xs text-gray-400 mt-2">Investment: {formatCurrency(investmentCost)}</p>
+                            </div>
+                        </div>
+
+                        {/* Results */}
+                        <div className="space-y-3 md:space-y-4">
+                            <StatCard
+                                title="Monthly Revenue"
+                                value={formatCurrency(monthlyRevenue)}
+                                icon={<span className="text-xl md:text-2xl">💰</span>}
+                                color="sky"
+                            />
+                            <StatCard
+                                title="Operating Expenses"
+                                value={formatCurrency(expenses)}
+                                icon={<span className="text-xl md:text-2xl">💸</span>}
+                                color="rose"
+                            />
+                            <StatCard
+                                title="Net Profit"
+                                value={formatCurrency(netProfit)}
+                                icon={<span className="text-xl md:text-2xl">📊</span>}
+                                color="emerald"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Your Earnings */}
+                    <div className="bg-gradient-to-br from-emerald-900/50 to-indigo-900/50 rounded-2xl p-4 md:p-8 border border-emerald-800">
+                        <h3 className="text-xl md:text-2xl font-black text-white mb-4 md:mb-6 text-center">Your Estimated Earnings ({shares} shares)</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                            <div className="text-center space-y-1 md:space-y-2 bg-gray-800/50 rounded-xl p-3 md:p-4">
+                                <p className="text-xs text-gray-400">Monthly Dividend</p>
+                                <p className="text-lg md:text-3xl font-black text-emerald-400">{formatCurrency(shareholderMonthly)}</p>
+                            </div>
+                            <div className="text-center space-y-1 md:space-y-2 bg-gray-800/50 rounded-xl p-3 md:p-4">
+                                <p className="text-xs text-gray-400">Yearly Dividend</p>
+                                <p className="text-lg md:text-3xl font-black text-indigo-400">{formatCurrency(shareholderYearly)}</p>
+                            </div>
+                            <div className="text-center space-y-1 md:space-y-2 bg-gray-800/50 rounded-xl p-3 md:p-4">
+                                <p className="text-xs text-gray-400">Per Share/Year</p>
+                                <p className="text-lg md:text-3xl font-black text-purple-400">{formatCurrency(profitPerShare)}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Growth Plan Section (mobile optimized)
+        const GrowthPlanSection = () => {
+            const milestones = [
+                { subscribers: 1000, month: 'Month 3', revenue: 350000, marketShare: 2 },
+                { subscribers: 3000, month: 'Month 6', revenue: 1050000, marketShare: 6 },
+                { subscribers: 5000, month: 'Month 12', revenue: 1750000, marketShare: 10 },
+                { subscribers: 10000, month: 'Month 24', revenue: 3500000, marketShare: 20 },
+                { subscribers: 25000, month: 'Month 36', revenue: 8750000, marketShare: 50 }
+            ];
+
+            return (
+                <div className="glass-morphism rounded-3xl p-4 md:p-8 space-y-6 md:space-y-8 animate-in fade-in">
+                    <h2 className="text-2xl md:text-3xl font-black text-white text-center">Growth Plan & Milestones</h2>
+
+                    {/* Timeline */}
+                    <div className="space-y-4 md:space-y-6">
+                        {milestones.map((milestone, idx) => {
+                            const financials = calculateFinancials(milestone.subscribers);
+                            
+                            return (
+                                <div key={idx} className="relative">
+                                    {idx < milestones.length - 1 && (
+                                        <div className="absolute left-6 md:left-8 top-20 md:top-24 bottom-0 w-1 bg-indigo-800 hidden md:block" />
+                                    )}
+                                    
+                                    <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+                                        <div className="flex-shrink-0 flex md:block justify-center">
+                                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-indigo-600 border-4 border-gray-900 flex items-center justify-center mx-auto">
+                                                <span className="text-lg md:text-2xl font-black text-white">{idx + 1}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex-1 bg-gray-800/50 border border-gray-700 rounded-2xl p-4 md:p-6">
+                                            <div className="flex flex-col md:flex-row justify-between items-start mb-3 md:mb-4">
+                                                <div>
+                                                    <h3 className="text-lg md:text-xl font-black text-white">{milestone.month}</h3>
+                                                    <p className="text-indigo-400 font-bold text-sm md:text-base">{formatNumber(milestone.subscribers)} Subscribers</p>
+                                                </div>
+                                                <div className="mt-2 md:mt-0 px-3 md:px-4 py-1 md:py-2 bg-indigo-900/50 rounded-xl">
+                                                    <p className="text-xs md:text-sm text-indigo-300">{milestone.marketShare}% Market Share</p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-3 gap-2 md:gap-4">
+                                                <div>
+                                                    <p className="text-[10px] md:text-xs text-gray-400">Monthly Revenue</p>
+                                                    <p className="text-xs md:text-lg font-bold text-white">{formatCurrency(financials.monthlyRevenue)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] md:text-xs text-gray-400">Net Profit</p>
+                                                    <p className="text-xs md:text-lg font-bold text-emerald-400">{formatCurrency(financials.netProfit)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] md:text-xs text-gray-400">Per Share/Year</p>
+                                                    <p className="text-xs md:text-lg font-bold text-indigo-400">{formatCurrency(financials.profitPerShare)}</p>
+                                                </div>
+                                            </div>
+                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Future Expansion */}
+                    <div className="bg-gradient-to-br from-purple-900/50 to-indigo-900/50 rounded-2xl p-4 md:p-8 border border-purple-800">
+                        <h3 className="text-xl md:text-2xl font-black text-white mb-4 md:mb-6 text-center">Future Expansion Options</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                            {[
+                                { icon: '🏔️', title: 'Regional', desc: 'Expand to neighboring states' },
+                                { icon: '💼', title: 'Services', desc: 'Add delivery & logistics' },
+                                { icon: '🤝', title: 'Partnerships', desc: 'Strategic alliances' },
+                                { icon: '📱', title: 'Tech', desc: 'Build proprietary app' }
+                            ].map((item, idx) => (
+                                <div key={idx} className="bg-white/5 border border-white/10 rounded-xl p-3 md:p-6 text-center space-y-1 md:space-y-2">
+                                    <div className="text-2xl md:text-4xl">{item.icon}</div>
+                                    <h4 className="font-bold text-white text-xs md:text-base">{item.title}</h4>
+                                    <p className="text-[10px] md:text-xs text-gray-400 hidden md:block">{item.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Shareholder Dashboard (mobile optimized)
+        const ShareholderDashboard = ({ user, onLogout }) => {
+            const [dashboardData, setDashboardData] = React.useState(null);
+            const [loading, setLoading] = React.useState(true);
+
+            React.useEffect(() => {
+                loadDashboardData();
+            }, []);
+
+            const loadDashboardData = async () => {
+                try {
+                    const data = await api.getShareholderDashboard(user.id);
+                    setDashboardData(data);
+                } catch (error) {
+                    alert('Error loading dashboard: ' + error.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            if (loading || !dashboardData) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+                            <p className="text-gray-400">Loading your dashboard...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            const currentSubscribers = dashboardData.totalSubscribers || 0;
+            const sc = dashboardData.subscriberCounts || {};
+            const livePrices = dashboardData.rolePrices || { DRIVER: 350, TRAVEL_AGENT: 500, SHOPS_HOTELS: 700 };
+            
+            const monthlyRevenue = sc.DRIVER * livePrices.DRIVER + sc.TRAVEL_AGENT * livePrices.TRAVEL_AGENT + sc.SHOPS_HOTELS * livePrices.SHOPS_HOTELS;
+            const expenses = monthlyRevenue * 0.25;
+            const netProfit = monthlyRevenue * 0.75;
+            const yearlyProfit = netProfit * 12;
+            const profitPerShare = yearlyProfit / TOTAL_SHARES;
+            
+            const shareholderMonthly = (netProfit / TOTAL_SHARES) * dashboardData.numShares;
+            const shareholderYearly = shareholderMonthly * 12;
+            const currentShareValue = dashboardData.currentStage?.pricePerShare || 1200;
+            const portfolioValue = dashboardData.numShares * currentShareValue;
+
+            const dividendHistory = dashboardData.dividendHistory?.map(dividend => ({
+                ...dividend,
+                amount: dividend.amount
+            })) || [];
+
+            return (
+                <div className="container mx-auto px-4 py-4 md:py-8 space-y-4 md:space-y-8">
+                    {/* Header */}
+                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h1 className="text-xl md:text-3xl font-black text-white mb-2">Welcome back, {user.name}!</h1>
+                            <p className="text-sm md:text-base text-gray-400">Shareholder ID: #{dashboardData.id}</p>
+                        </div>
+                        <button
+                            onClick={onLogout}
+                            className="w-full md:w-auto px-4 md:px-6 py-2 md:py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl transition-all text-sm md:text-base"
+                        >
+                            Logout
+                        </button>
+                    </div>
+
+                    {/* Portfolio Overview */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                        <StatCard
+                            title="Your Shares"
+                            value={dashboardData.numShares}
+                            icon={<span className="text-xl md:text-2xl">📊</span>}
+                            color="indigo"
+                        />
+                        <StatCard
+                            title="Portfolio Value"
+                            value={formatCurrency(portfolioValue)}
+                            icon={<span className="text-xl md:text-2xl">💼</span>}
+                            color="purple"
+                        />
+                        <StatCard
+                            title="Monthly Dividend"
+                            value={formatCurrency(shareholderMonthly)}
+                            icon={<span className="text-xl md:text-2xl">💰</span>}
+                            color="emerald"
+                        />
+                        <StatCard
+                            title="Yearly Dividend"
+                            value={formatCurrency(shareholderYearly)}
+                            icon={<span className="text-xl md:text-2xl">📈</span>}
+                            color="amber"
+                        />
+                    </div>
+
+                    {/* Live Business Metrics */}
+                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 space-y-4 md:space-y-6">
+                        <h2 className="text-xl md:text-2xl font-black text-white">Live Business Metrics</h2>
+
+                        {/* Per-role breakdown */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+                            {[
+                                { role: 'DRIVER', label: 'Drivers', icon: '🚗', bg: 'bg-indigo-900/40 border-indigo-700' },
+                                { role: 'TRAVEL_AGENT', label: 'Travel Agents', icon: '✈️', bg: 'bg-sky-900/40 border-sky-700' },
+                                { role: 'SHOPS_HOTELS', label: 'Shops & Hotels', icon: '🏨', bg: 'bg-purple-900/40 border-purple-700' }
+                            ].map(({ role, label, icon, bg }) => {
+                                const cnt = (dashboardData.subscriberCounts || {})[role] || 0;
+                                const fee = livePrices[role] || 0;
+                                const rev = cnt * fee;
+                                return (
+                                    <div key={role} className={`border rounded-2xl p-3 md:p-5 ${bg}`}>
+                                        <div className="flex items-center gap-2 mb-2 md:mb-3">
+                                            <span className="text-xl md:text-2xl">{icon}</span>
+                                            <span className="font-bold text-white text-sm md:text-base">{label}</span>
+                                        </div>
+                                        <p className="text-2xl md:text-3xl font-black text-white">{formatNumber(cnt)}</p>
+                                        <p className="text-xs text-gray-400 mt-1">subscribers</p>
+                                        <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-white/10 space-y-1">
+                                            <p className="text-xs text-gray-400">Fee: <span className="text-white font-bold">₹{fee.toLocaleString('en-IN')}/mo</span></p>
+                                            <p className="text-xs text-gray-400">Revenue: <span className="text-emerald-400 font-bold">{formatCurrency(rev)}</span></p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Profit Calculation Flow */}
+                        <div className="bg-gray-800/50 rounded-xl p-3 md:p-6 space-y-3 md:space-y-4">
+                            <h3 className="font-bold text-white text-sm md:text-base">Profit Calculation Flow (25% Deduction)</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 text-xs md:text-sm">
+                                <div>
+                                    <p className="text-gray-400">Monthly Revenue</p>
+                                    <p className="text-white font-bold">{formatCurrency(monthlyRevenue)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-400">Expenses (25%)</p>
+                                    <p className="text-rose-400 font-bold">-{formatCurrency(expenses)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-400">Net Profit (75%)</p>
+                                    <p className="text-emerald-400 font-bold">{formatCurrency(netProfit)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-400">Your Share</p>
+                                    <p className="text-indigo-400 font-bold">{formatCurrency(shareholderMonthly)}/mo</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Dividend History */}
+                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 space-y-4 md:space-y-6">
+                        <h2 className="text-xl md:text-2xl font-black text-white">Dividend History</h2>
+                        
+                        {dividendHistory.length > 0 ? (
+                            <div className="overflow-x-auto -mx-4 md:mx-0">
+                                <table className="w-full min-w-[400px]">
+                                    <thead>
+                                        <tr className="border-b border-gray-700">
+                                            <th className="text-left py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Month</th>
+                                            <th className="text-right py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Amount</th>
+                                            <th className="text-center py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {dividendHistory.map((dividend, idx) => (
+                                            <tr key={idx} className="border-b border-gray-800">
+                                                <td className="py-3 px-2 md:px-4 text-white text-xs md:text-sm">{dividend.month}</td>
+                                                <td className="py-3 px-2 md:px-4 text-right text-emerald-400 font-bold text-xs md:text-sm">
+                                                    {formatCurrency(dividend.amount)}
+                                                </td>
+                                                <td className="py-3 px-2 md:px-4 text-center">
+                                                    <span className="px-2 md:px-3 py-1 bg-emerald-900/50 text-emerald-300 rounded-full text-[10px] md:text-xs font-bold">
+                                                        {dividend.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 md:py-12 bg-gray-800/50 rounded-xl">
+                                <p className="text-sm md:text-base text-gray-400">No dividend history yet.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // Admin Dashboard (mobile optimized) - Updated with fixed reject button and PDF generation
+        const AdminDashboard = ({ onLogout }) => {
+            const [adminData, setAdminData] = React.useState(null);
+            const [loading, setLoading] = React.useState(true);
+            const [serverOnline, setServerOnline] = React.useState(true);
+            const [subscriberCounts, setSubscriberCounts] = React.useState({
+                [BusinessRole.DRIVER]: 0,
+                [BusinessRole.TRAVEL_AGENT]: 0,
+                [BusinessRole.SHOPS_HOTELS]: 0
+            });
+            const [rolePrices, setRolePrices] = React.useState({
+                [BusinessRole.DRIVER]: 350,
+                [BusinessRole.TRAVEL_AGENT]: 500,
+                [BusinessRole.SHOPS_HOTELS]: 700
+            });
+            const [priceEditing, setPriceEditing] = React.useState(false);
+            const [tempPrices, setTempPrices] = React.useState({
+                [BusinessRole.DRIVER]: 350,
+                [BusinessRole.TRAVEL_AGENT]: 500,
+                [BusinessRole.SHOPS_HOTELS]: 700
+            });
+            const [selectedShareholder, setSelectedShareholder] = React.useState(null);
+            const [generatingPDF, setGeneratingPDF] = React.useState(null);
+            const [actionLoading, setActionLoading] = React.useState(null);
+
+            React.useEffect(() => {
+                loadAdminData();
+            }, []);
+
+            const savePrices = async () => {
+                try {
+                    await api.updateRolePrices(tempPrices);
+                    setRolePrices({...tempPrices});
+                    setPriceEditing(false);
+                } catch (err) {
+                    alert('Error saving prices: ' + err.message);
+                }
+            };
+
+            const loadAdminData = async () => {
+                try {
+                    const data = await api.getAdminDashboard();
+                    if (data && data.success !== false) {
+                        setAdminData(data);
+                        if (data.subscriberCounts) setSubscriberCounts(data.subscriberCounts);
+                        if (data.rolePrices) {
+                            setRolePrices(data.rolePrices);
+                            setTempPrices(data.rolePrices);
+                        }
+                        setServerOnline(true);
+                    } else {
+                        setAdminData({ agreements: [], subscriberCounts: { DRIVER: 0, TRAVEL_AGENT: 0, SHOPS_HOTELS: 0 } });
+                        setServerOnline(false);
+                    }
+                } catch (error) {
+                    setAdminData({ agreements: [], subscriberCounts: { DRIVER: 0, TRAVEL_AGENT: 0, SHOPS_HOTELS: 0 } });
+                    setServerOnline(false);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleUpdateSubscribers = async (role, count) => {
+                try {
+                    await api.updateSubscriberCount(role, count);
+                    setSubscriberCounts(prev => ({ ...prev, [role]: count }));
+                    loadAdminData();
+                } catch (error) {
+                    alert('Error updating subscriber count: ' + error.message);
+                }
+            };
+
+            const handleUpdateAgreement = async (agreementId, status, investorName) => {
+                const action = status === AgreementStatus.APPROVED ? 'APPROVE' : 'REJECT';
+                const confirmed = window.confirm(`${action} agreement for:\n\n${investorName}\n\nAre you sure?`);
+                if (!confirmed) return;
+                setActionLoading(agreementId);
+                try {
+                    const result = await api.updateAgreementStatus(agreementId, status);
+                    if (result && result.success === false) {
+                        alert('Error: ' + result.message);
+                        return;
+                    }
+                    await loadAdminData();
+                    alert(`Agreement for ${investorName} has been ${status.toLowerCase()} successfully!`);
+                } catch (error) {
+                    alert('Error updating agreement: ' + error.message);
+                } finally {
+                    setActionLoading(null);
+                }
+            };
+
+            const handleGeneratePDF = async (agreementId) => {
+                setGeneratingPDF(agreementId);
+                try {
+                    // generateAgreementPDF now handles the download directly via anchor click
+                    await api.generateAgreementPDF(agreementId, {});
+                } catch (error) {
+                    alert('PDF Error: ' + error.message);
+                } finally {
+                    setGeneratingPDF(null);
+                }
+            };
+
+            const handleViewDetails = (shareholderId) => {
+                setSelectedShareholder(shareholderId);
+            };
+
+            if (loading || !adminData) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                            <p className="text-gray-400">Loading admin dashboard...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            const totalSubscribers = Object.values(subscriberCounts).reduce((a, b) => a + b, 0);
+            const financials = calculateFinancials({ counts: subscriberCounts, prices: rolePrices });
+
+            return (
+                <div className="container mx-auto px-4 py-4 md:py-8 space-y-4 md:space-y-8">
+                    {/* Header */}
+                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h1 className="text-xl md:text-3xl font-black text-white mb-2">Administrator Dashboard</h1>
+                            <p className="text-sm md:text-base text-gray-400">Manage subscribers and approvals</p>
+                        </div>
+                        <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4 w-full md:w-auto">
+                            <div className={`flex items-center gap-2 px-2 md:px-3 py-1 rounded-full text-[10px] md:text-xs font-bold ${serverOnline ? 'bg-emerald-900/50 text-emerald-300' : 'bg-rose-900/50 text-rose-300'}`}>
+                                <span className={`w-1.5 md:w-2 h-1.5 md:h-2 rounded-full ${serverOnline ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
+                                {serverOnline ? 'Server Online' : 'Offline'}
+                            </div>
+                            <button
+                                onClick={onLogout}
+                                className="w-full md:w-auto px-4 md:px-6 py-2 md:py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl transition-all text-sm md:text-base"
+                            >
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+
+                    {!serverOnline && (
+                        <div className="bg-rose-900/30 border border-rose-700 rounded-2xl p-4 md:p-6 text-center space-y-2">
+                            <p className="text-rose-300 font-bold text-sm md:text-lg">⚠️ Cannot connect to server</p>
+                            <button onClick={loadAdminData} className="mt-2 px-3 md:px-4 py-2 bg-rose-700 hover:bg-rose-600 text-white rounded-xl text-xs md:text-sm font-bold">
+                                Retry Connection
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Price Management */}
+                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 space-y-4 md:space-y-6">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                            <div>
+                                <h2 className="text-xl md:text-2xl font-black text-white">💰 Price Management</h2>
+                                <p className="text-xs md:text-sm text-gray-400 mt-1">Set monthly subscription fee per role</p>
+                            </div>
+                            {!priceEditing ? (
+                                <button onClick={() => { setTempPrices({...rolePrices}); setPriceEditing(true); }}
+                                    className="w-full md:w-auto px-4 md:px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all text-sm">
+                                    ✏️ Edit Prices
+                                </button>
+                            ) : (
+                                <div className="flex gap-2 w-full md:w-auto">
+                                    <button onClick={savePrices}
+                                        className="flex-1 md:flex-none px-4 md:px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all text-sm">
+                                        ✅ Save
+                                    </button>
+                                    <button onClick={() => { setTempPrices({...rolePrices}); setPriceEditing(false); }}
+                                        className="flex-1 md:flex-none px-4 md:px-5 py-2 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-xl transition-all text-sm">
+                                        Cancel
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+                            {[
+                                { role: BusinessRole.DRIVER, label: 'Drivers', icon: '🚗' },
+                                { role: BusinessRole.TRAVEL_AGENT, label: 'Travel Agents', icon: '✈️' },
+                                { role: BusinessRole.SHOPS_HOTELS, label: 'Shops & Hotels', icon: '🏨' }
+                            ].map(({ role, label, icon }) => (
+                                <div key={role} className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4 md:p-5 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xl md:text-2xl">{icon}</span>
+                                        <span className="font-bold text-white text-xs md:text-sm">{label}</span>
+                                    </div>
+                                    {priceEditing ? (
+                                        <div>
+                                            <label className="text-xs text-gray-400 mb-1 block">Monthly Fee (₹)</label>
+                                            <input
+                                                type="number"
+                                                value={tempPrices[role]}
+                                                min="1"
+                                                onChange={(e) => setTempPrices(prev => ({ ...prev, [role]: parseInt(e.target.value) || 0 }))}
+                                                className="w-full px-3 py-2 bg-gray-900 border border-indigo-500 rounded-xl text-white text-base md:text-lg font-bold focus:outline-none"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <p className="text-xl md:text-2xl font-black text-white">₹{rolePrices[role].toLocaleString('en-IN')}</p>
+                                            <p className="text-xs text-gray-400">per month</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Subscriber Management */}
+                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 space-y-4 md:space-y-6">
+                        <h2 className="text-xl md:text-2xl font-black text-white">Subscriber Management</h2>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
+                            {[
+                                { role: BusinessRole.DRIVER, label: 'Drivers', icon: '🚗' },
+                                { role: BusinessRole.TRAVEL_AGENT, label: 'Travel Agents', icon: '✈️' },
+                                { role: BusinessRole.SHOPS_HOTELS, label: 'Shops & Hotels', icon: '🏨' }
+                            ].map(({ role, label, icon }) => (
+                                <div key={role} className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4 md:p-6 space-y-3 md:space-y-4">
+                                    <div className="flex items-center gap-2 md:gap-3">
+                                        <span className="text-2xl md:text-3xl">{icon}</span>
+                                        <h3 className="font-bold text-white text-sm md:text-base">{label}</h3>
+                                    </div>
+                                    
+                                    <input
+                                        type="number"
+                                        value={subscriberCounts[role]}
+                                        onChange={(e) => handleUpdateSubscribers(role, parseInt(e.target.value) || 0)}
+                                        className="w-full px-3 md:px-4 py-2 md:py-3 bg-gray-900 border border-gray-700 rounded-xl text-white text-base md:text-xl font-bold focus:border-indigo-500 focus:outline-none"
+                                    />
+                                    
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] md:text-xs text-gray-500">Fee: ₹{rolePrices[role].toLocaleString('en-IN')}/month</p>
+                                        <p className="text-xs md:text-sm text-gray-400 font-bold">
+                                            Revenue: {formatCurrency(subscriberCounts[role] * rolePrices[role])}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Financial Overview */}
+                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 space-y-4 md:space-y-6">
+                        <h2 className="text-xl md:text-2xl font-black text-white">Live Business Metrics</h2>
+
+                        {/* Summary totals */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                            <StatCard
+                                title="Total Subscribers"
+                                value={formatNumber(totalSubscribers)}
+                                icon={<span className="text-xl md:text-2xl">👥</span>}
+                                color="sky"
+                            />
+                            <StatCard
+                                title="Monthly Revenue"
+                                value={formatCurrency(financials.monthlyRevenue)}
+                                icon={<span className="text-xl md:text-2xl">💰</span>}
+                                color="emerald"
+                            />
+                            <StatCard
+                                title="Operating Expenses"
+                                value={formatCurrency(financials.expenses)}
+                                icon={<span className="text-xl md:text-2xl">💸</span>}
+                                color="rose"
+                            />
+                            <StatCard
+                                title="Net Profit"
+                                value={formatCurrency(financials.netProfit)}
+                                icon={<span className="text-xl md:text-2xl">✨</span>}
+                                color="indigo"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Pending Agreements */}
+                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 space-y-4 md:space-y-6">
+                        <h2 className="text-xl md:text-2xl font-black text-white">Investor Agreements</h2>
+                        
+                        <div className="overflow-x-auto -mx-4 md:mx-0">
+                            <table className="w-full min-w-[800px]">
+                                <thead>
+                                    <tr className="border-b border-gray-700">
+                                        <th className="text-left py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Name</th>
+                                        <th className="text-right py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Shares</th>
+                                        <th className="text-right py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Investment</th>
+                                        <th className="text-center py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Status</th>
+                                        <th className="text-center py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {adminData.agreements?.map((agreement) => (
+                                        <tr key={agreement.id} className="border-b border-gray-800">
+                                            <td className="py-3 px-2 md:px-4">
+                                                <div className="flex items-center gap-2 md:gap-3">
+                                                    {agreement.photo_data && (
+                                                        <img 
+                                                            src={agreement.photo_data} 
+                                                            alt={agreement.full_name}
+                                                            className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border-2 border-gray-700"
+                                                        />
+                                                    )}
+                                                    <div>
+                                                        <p className="text-white font-bold text-xs md:text-sm">{agreement.full_name}</p>
+                                                        <p className="text-[10px] md:text-xs text-gray-400">{agreement.email}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-2 md:px-4 text-right text-white font-bold text-xs md:text-sm">
+                                                {agreement.num_shares}
+                                            </td>
+                                            <td className="py-3 px-2 md:px-4 text-right text-emerald-400 font-bold text-xs md:text-sm">
+                                                {formatCurrency(agreement.total_investment)}
+                                            </td>
+                                            <td className="py-3 px-2 md:px-4 text-center">
+                                                <span className={`px-2 md:px-3 py-1 rounded-full text-[10px] md:text-xs font-bold ${
+                                                    agreement.status === AgreementStatus.APPROVED ? 'bg-emerald-900/50 text-emerald-300' :
+                                                    agreement.status === AgreementStatus.REJECTED ? 'bg-rose-900/50 text-rose-300' :
+                                                    'bg-amber-900/50 text-amber-300'
+                                                }`}>
+                                                    {agreement.status}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-2 md:px-4">
+                                                <div className="flex gap-1 md:gap-2 justify-center">
+                                                    <button
+                                                        onClick={() => handleViewDetails(agreement.id)}
+                                                        className="px-2 md:px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs md:text-sm font-bold transition-all"
+                                                        title="View Details"
+                                                    >
+                                                        👁️
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { const id = agreement.id; const name = agreement.full_name; handleUpdateAgreement(id, AgreementStatus.APPROVED, name); }}
+                                                        disabled={actionLoading === agreement.id}
+                                                        className="px-2 md:px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs md:text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        title="Approve"
+                                                    >
+                                                        {actionLoading === agreement.id ? '⏳' : '✓'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { const id = agreement.id; const name = agreement.full_name; handleUpdateAgreement(id, AgreementStatus.REJECTED, name); }}
+                                                        disabled={actionLoading === agreement.id}
+                                                        className="px-2 md:px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs md:text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        title="Reject"
+                                                    >
+                                                        {actionLoading === agreement.id ? '⏳' : '✕'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleGeneratePDF(agreement.id)}
+                                                        disabled={generatingPDF === agreement.id}
+                                                        className="px-2 md:px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs md:text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        title="Generate PDF"
+                                                    >
+                                                        {generatingPDF === agreement.id ? '⏳' : '📄'}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Shareholder Details Modal */}
+                    {selectedShareholder && (
+                        <ShareholderDetailsModal
+                            shareholderId={selectedShareholder}
+                            onClose={() => setSelectedShareholder(null)}
+                        />
+                    )}
+                </div>
+            );
+        };
+
+        // Footer Component
+        const Footer = () => {
+            return (
+                <footer className="glass-morphism py-6 md:py-8 border-t border-gray-800 mt-8">
+                    <div className="container mx-auto px-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+                            {/* Office Address */}
+                            <div className="space-y-2 md:space-y-3 text-center md:text-left">
+                                <h3 className="font-bold text-white text-base md:text-lg">📍 Quick Ride Office</h3>
+                                <p className="text-gray-400 text-xs md:text-sm">
+                                    Burtuk, Helipad Gangtok<br />
+                                    737101<br />
+                                    East District, Sikkim
+                                </p>
+                            </div>
+
+                            {/* Contact Us */}
+                            <div className="space-y-2 md:space-y-3 text-center md:text-left">
+                                <h3 className="font-bold text-white text-base md:text-lg">📞 Contact Us</h3>
+                                <p className="text-gray-400 text-xs md:text-sm">
+                                    +91 9932369890<br /> 
+									+91 7001258960<br /> 
+                                    Email: quickcab2026@gmail.com
+                                </p>
+                            </div>
+
+                        </div>
+                        
+                        <div className="mt-6 md:mt-8 pt-4 md:pt-6 border-t border-gray-800 text-center">
+                            <Logo size="sm" showText={false} />
+                            <p className="mt-3 md:mt-4 text-gray-400 text-xs md:text-sm">
+                                &copy; {new Date().getFullYear()} Quick Ride . All rights reserved.
+                            </p>
+                        </div>
+                    </div>
+                </footer>
+            );
+        };
+
+        // Main App Component
+        const App = () => {
+            const [currentUser, setCurrentUser] = React.useState(null);
+            const [showAgreementForm, setShowAgreementForm] = React.useState(false);
+            const [showFrontPage, setShowFrontPage] = React.useState(true);
+
+            const handleLogin = (user) => {
+                setCurrentUser(user);
+            };
+
+            const handleLogout = () => {
+                setCurrentUser(null);
+            };
+
+            const navigateToMain = () => {
+                setShowFrontPage(false);
+            };
+
+            const navigateToFront = () => {
+                setShowFrontPage(true);
+            };
+
+            const renderView = () => {
+                if (!currentUser) {
+                    if (showFrontPage) {
+                        return (
+                            <>
+                                <FrontPage 
+                                    onNavigateToMain={navigateToMain}
+                                    onOpenForm={() => setShowAgreementForm(true)}
+                                />
+                                {showAgreementForm && (
+                                    <InvestmentAgreementForm
+                                        onClose={() => setShowAgreementForm(false)}
+                                        onSuccess={() => {}}
+                                    />
+                                )}
+                            </>
+                        );
+                    }
+                    return (
+                        <>
+                            <LandingPage 
+                                onOpenForm={() => setShowAgreementForm(true)}
+                                onLogin={handleLogin}
+                                onBackToFront={navigateToFront}
+                            />
+                            {showAgreementForm && (
+                                <InvestmentAgreementForm
+                                    onClose={() => setShowAgreementForm(false)}
+                                    onSuccess={() => {}}
+                                />
+                            )}
+                            <Footer />
+                        </>
+                    );
+                }
+
+                if (currentUser.role === UserRole.ADMIN) {
+                    return <AdminDashboard onLogout={handleLogout} />;
+                }
+
+                return <ShareholderDashboard user={currentUser} onLogout={handleLogout} />;
+            };
+
+            return (
+                <div className="min-h-screen">
+                    {renderView()}
+                </div>
+            );
+        };
+
+        // Render the app
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
