@@ -57,7 +57,10 @@ async function initializeDatabase() {
             id             INTEGER PRIMARY KEY AUTOINCREMENT,
             shareholder_id INTEGER NOT NULL REFERENCES shareholders(id),
             month          TEXT    NOT NULL,
+            gross_amount   REAL    NOT NULL DEFAULT 0,
+            gst_rate       REAL    NOT NULL DEFAULT 0,
             amount         REAL    NOT NULL,
+            payment_method TEXT    NOT NULL DEFAULT 'Bank Transfer',
             status         TEXT    NOT NULL DEFAULT 'PAID',
             paid_at        TEXT    NOT NULL DEFAULT (datetime('now'))
         );
@@ -78,8 +81,12 @@ async function initializeDatabase() {
         );
     `);
 
-    await db.executeMultiple(`
-        INSERT OR IGNORE INTO subscriber_counts (business_role, count) VALUES ('DRIVER', 0);
+    // Migrate existing DBs: add gst columns if missing (safe – ignored if already exist)
+    try { await db.execute(`ALTER TABLE dividend_history ADD COLUMN gross_amount REAL NOT NULL DEFAULT 0`); } catch(_) {}
+    try { await db.execute(`ALTER TABLE dividend_history ADD COLUMN gst_rate REAL NOT NULL DEFAULT 0`); } catch(_) {}
+    try { await db.execute(`ALTER TABLE dividend_history ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'Bank Transfer'`); } catch(_) {}
+
+    await db.executeMultiple(` (business_role, count) VALUES ('DRIVER', 0);
         INSERT OR IGNORE INTO subscriber_counts (business_role, count) VALUES ('TRAVEL_AGENT', 0);
         INSERT OR IGNORE INTO subscriber_counts (business_role, count) VALUES ('SHOPS_HOTELS', 0);
         INSERT OR IGNORE INTO role_prices (business_role, price) VALUES ('DRIVER', 350);
@@ -177,7 +184,12 @@ app.get('/api/shareholders/:id/dashboard', async (req, res) => {
         const divR = await db.execute({ sql: `SELECT * FROM dividend_history WHERE shareholder_id = ? ORDER BY paid_at DESC LIMIT 24`, args: [sh.id] });
         const dividendHistory = divR.rows.map(d => ({
             month: new Date(d.paid_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'long' }),
-            amount: d.amount, status: d.status
+            paidAt: new Date(d.paid_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+            grossAmount: d.gross_amount || d.amount,
+            gstRate: d.gst_rate || 0,
+            amount: d.amount,
+            paymentMethod: d.payment_method || 'Bank Transfer',
+            status: d.status
         }));
         const prR = await db.execute(`SELECT business_role, price FROM role_prices`);
         const rolePrices = {};
@@ -483,6 +495,67 @@ app.post('/api/admin/agreements/:id/pdf', async (req, res) => {
     } catch (err) {
         console.error('POST /api/admin/agreements/:id/pdf:', err.message);
         if (!res.headersSent) res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ==================== DIVIDEND ROUTES ====================
+
+// Pay dividend to one shareholder
+app.post('/api/admin/dividends', async (req, res) => {
+    try {
+        const { shareholderId, month, amount, gstRate, paymentMethod } = req.body;
+        if (!shareholderId || !month || !amount)
+            return res.status(400).json({ success: false, message: 'shareholderId, month, and amount are required' });
+        const sh = await db.execute({ sql: `SELECT id, full_name, status FROM shareholders WHERE id = ?`, args: [Number(shareholderId)] });
+        if (!sh.rows[0]) return res.status(404).json({ success: false, message: 'Shareholder not found' });
+        if (sh.rows[0].status !== 'APPROVED') return res.status(400).json({ success: false, message: 'Shareholder is not approved' });
+        const grossAmount = Number(amount);
+        const gst = Number(gstRate) || 0;
+        const gstDeducted = Math.round((grossAmount * gst / 100) * 100) / 100;
+        const netAmount = Math.round((grossAmount - gstDeducted) * 100) / 100;
+        const method = paymentMethod || 'Bank Transfer';
+        await db.execute({
+            sql : `INSERT INTO dividend_history (shareholder_id, month, gross_amount, gst_rate, amount, payment_method, status, paid_at) VALUES (?, ?, ?, ?, ?, ?, 'PAID', datetime('now'))`,
+            args: [Number(shareholderId), month, grossAmount, gst, netAmount, method]
+        });
+        console.log(`💸 Dividend gross=₹${grossAmount} GST=${gst}% net=₹${netAmount} via ${method} recorded for ${sh.rows[0].full_name} — ${month}`);
+        res.json({ success: true, message: `Dividend recorded for ${sh.rows[0].full_name}`, grossAmount, gstDeducted, netAmount });
+    } catch (err) {
+        console.error('POST /api/admin/dividends:', err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// Auto-pay all approved shareholders proportionally from a net profit amount
+app.post('/api/admin/dividends/all', async (req, res) => {
+    try {
+        const { month, amount, gstRate, paymentMethod } = req.body;
+        if (!month || !amount)
+            return res.status(400).json({ success: false, message: 'month and amount (net profit) are required' });
+        const grossTotal = Number(amount);
+        const gst = Number(gstRate) || 0;
+        const method = paymentMethod || 'Bank Transfer';
+        const shareholders = await db.execute(`SELECT id, full_name, num_shares FROM shareholders WHERE status = 'APPROVED' AND business_role != 'ADMIN'`);
+        if (shareholders.rows.length === 0)
+            return res.json({ success: true, message: 'No approved shareholders found', count: 0 });
+        const totalShares = shareholders.rows.reduce((sum, sh) => sum + sh.num_shares, 0);
+        if (totalShares === 0) return res.status(400).json({ success: false, message: 'Total shares is 0, cannot distribute' });
+        let count = 0;
+        for (const sh of shareholders.rows) {
+            const shGross = Math.round((sh.num_shares / totalShares) * grossTotal * 100) / 100;
+            const shGstDeducted = Math.round((shGross * gst / 100) * 100) / 100;
+            const shNet = Math.round((shGross - shGstDeducted) * 100) / 100;
+            await db.execute({
+                sql : `INSERT INTO dividend_history (shareholder_id, month, gross_amount, gst_rate, amount, payment_method, status, paid_at) VALUES (?, ?, ?, ?, ?, ?, 'PAID', datetime('now'))`,
+                args: [sh.id, month, shGross, gst, shNet, method]
+            });
+            count++;
+        }
+        console.log(`💸 Auto-paid dividends from gross ₹${grossTotal} GST=${gst}% to ${count} shareholders — ${month}`);
+        res.json({ success: true, message: `Dividends paid to ${count} shareholders`, count });
+    } catch (err) {
+        console.error('POST /api/admin/dividends/all:', err.message);
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
