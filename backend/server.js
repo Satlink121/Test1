@@ -16,15 +16,18 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(__dirname));
 
 // ==================== DATABASE SETUP ====================
-const Database = require('better-sqlite3');
-const db = new Database(path.join(__dirname, 'quickride.db'));
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-console.log('✅ SQLite database initialized (quickride.db)');
+// Uses Turso if TURSO_URL is set (production), otherwise local SQLite file (local dev)
+const { createClient } = require('@libsql/client');
+const db = createClient(
+    process.env.TURSO_URL
+        ? { url: process.env.TURSO_URL, authToken: process.env.TURSO_TOKEN || '' }
+        : { url: `file:${path.join(__dirname, 'quickride.db')}` }
+);
+console.log(process.env.TURSO_URL ? '✅ Turso DB connected' : '✅ Local SQLite initialized (quickride.db)');
 
 // ==================== SCHEMA ====================
-function initializeDatabase() {
-    db.exec(`
+async function initializeDatabase() {
+    await db.executeMultiple(`
         CREATE TABLE IF NOT EXISTS shareholders (
             id               INTEGER PRIMARY KEY AUTOINCREMENT,
             full_name        TEXT    NOT NULL,
@@ -77,7 +80,7 @@ function initializeDatabase() {
         );
     `);
 
-    db.exec(`
+    await db.executeMultiple(`
         INSERT OR IGNORE INTO subscriber_counts (business_role, count) VALUES ('DRIVER', 0);
         INSERT OR IGNORE INTO subscriber_counts (business_role, count) VALUES ('TRAVEL_AGENT', 0);
         INSERT OR IGNORE INTO subscriber_counts (business_role, count) VALUES ('SHOPS_HOTELS', 0);
@@ -86,9 +89,9 @@ function initializeDatabase() {
         INSERT OR IGNORE INTO role_prices (business_role, price) VALUES ('SHOPS_HOTELS', 700);
     `);
 
-    const stageCount = db.prepare(`SELECT COUNT(*) AS n FROM investment_stages`).get();
-    if (stageCount.n === 0) {
-        db.exec(`
+    const stageCount = await db.execute(`SELECT COUNT(*) AS n FROM investment_stages`);
+    if (stageCount.rows[0].n === 0) {
+        await db.executeMultiple(`
             INSERT INTO investment_stages (stage, name, price_per_share, min_subscribers, max_subscribers, status, shares_available) VALUES (1, 'Base Price', 1000, 0, 1500, 'SOLD_OUT', 0);
             INSERT INTO investment_stages (stage, name, price_per_share, min_subscribers, max_subscribers, status, shares_available) VALUES (2, 'Current Price', 1200, 1501, 5000, 'RUNNING', 100);
             INSERT INTO investment_stages (stage, name, price_per_share, min_subscribers, max_subscribers, status, shares_available) VALUES (3, 'Next Price', 1440, 5001, 15000, 'UPCOMING', 100);
@@ -96,14 +99,16 @@ function initializeDatabase() {
         console.log('✅ Investment stages seeded');
     }
 
-    const adminRow = db.prepare(`SELECT id FROM shareholders WHERE username = 'admin'`).get();
-    const hash = bcrypt.hashSync('Qc@242526', 10);
-    if (!adminRow) {
-        db.prepare(`INSERT INTO shareholders (full_name, father_name, address, pin_code, phone, email, business_role, num_shares, username, password_hash, total_investment, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
-          .run('Administrator', '', 'Quick Ride HQ', '000000', '+91 00000 00000', 'admin@quickride.com', 'ADMIN', 0, 'admin', hash, 0, 'APPROVED');
+    const adminRow = await db.execute(`SELECT id FROM shareholders WHERE username = 'admin'`);
+    const hash = await bcrypt.hash('Qc@242526', 10);
+    if (adminRow.rows.length === 0) {
+        await db.execute({
+            sql : `INSERT INTO shareholders (full_name, father_name, address, pin_code, phone, email, business_role, num_shares, username, password_hash, total_investment, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+            args: ['Administrator', '', 'Quick Ride HQ', '000000', '+91 00000 00000', 'admin@quickride.com', 'ADMIN', 0, 'admin', hash, 0, 'APPROVED']
+        });
         console.log('✅ Admin created  →  username: admin  |  password: Qc@242526');
     } else {
-        db.prepare(`UPDATE shareholders SET password_hash = ?, status = 'APPROVED' WHERE username = 'admin'`).run(hash);
+        await db.execute({ sql: `UPDATE shareholders SET password_hash = ?, status = 'APPROVED' WHERE username = 'admin'`, args: [hash] });
         console.log('✅ Admin password verified');
     }
 
@@ -111,9 +116,9 @@ function initializeDatabase() {
 }
 
 // ==================== HELPERS ====================
-const getRunningStage = () => {
-    const r = db.prepare(`SELECT * FROM investment_stages WHERE status = 'RUNNING'`).get();
-    return r || { price_per_share: 1200, stage: 2, name: 'Current Price' };
+const getRunningStage = async () => {
+    const r = await db.execute(`SELECT * FROM investment_stages WHERE status = 'RUNNING'`);
+    return r.rows[0] || { price_per_share: 1200, stage: 2, name: 'Current Price' };
 };
 
 // ==================== API ROUTES ====================
@@ -123,16 +128,18 @@ app.post('/api/agreements', async (req, res) => {
         const { fullName, fatherName, address, phone, email, businessRole, numShares, username, password, photoData, investorSignature } = req.body;
         if (!fullName || !address || !phone || !email || !username || !password || !numShares)
             return res.status(400).json({ success: false, message: 'Missing required fields' });
-        if (db.prepare('SELECT id FROM shareholders WHERE username = ?').get(username))
-            return res.status(400).json({ success: false, message: 'Username already taken' });
-        if (db.prepare('SELECT id FROM shareholders WHERE email = ?').get(email))
-            return res.status(400).json({ success: false, message: 'Email already registered' });
-        const currentStage = getRunningStage();
+        const eu = await db.execute({ sql: 'SELECT id FROM shareholders WHERE username = ?', args: [username] });
+        if (eu.rows.length > 0) return res.status(400).json({ success: false, message: 'Username already taken' });
+        const ee = await db.execute({ sql: 'SELECT id FROM shareholders WHERE email = ?', args: [email] });
+        if (ee.rows.length > 0) return res.status(400).json({ success: false, message: 'Email already registered' });
+        const currentStage = await getRunningStage();
         const pricePerShare = currentStage.price_per_share;
         const totalInvestment = numShares * pricePerShare;
         const passwordHash = await bcrypt.hash(password, 10);
-        const result = db.prepare(`INSERT INTO shareholders (full_name, father_name, address, pin_code, phone, email, business_role, num_shares, username, password_hash, photo_data, signature_data, total_investment, price_per_share, stage, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-            .run(fullName, fatherName || '', address, '', phone, email, businessRole || 'DRIVER', numShares, username, passwordHash, photoData || null, investorSignature || null, totalInvestment, pricePerShare, currentStage.stage, 'PENDING', new Date().toISOString());
+        const result = await db.execute({
+            sql : `INSERT INTO shareholders (full_name, father_name, address, pin_code, phone, email, business_role, num_shares, username, password_hash, photo_data, signature_data, total_investment, price_per_share, stage, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            args: [fullName, fatherName || '', address, '', phone, email, businessRole || 'DRIVER', numShares, username, passwordHash, photoData || null, investorSignature || null, totalInvestment, pricePerShare, currentStage.stage, 'PENDING', new Date().toISOString()]
+        });
         console.log(`✅ New investor registered: ${fullName}`);
         res.json({ success: true, message: 'Agreement submitted successfully', id: Number(result.lastInsertRowid) });
     } catch (err) {
@@ -145,7 +152,8 @@ app.post('/api/auth/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         if (!username || !password) return res.status(400).json({ success: false, message: 'Username and password required' });
-        const row = db.prepare(`SELECT * FROM shareholders WHERE username = ?`).get(username);
+        const result = await db.execute({ sql: `SELECT * FROM shareholders WHERE username = ?`, args: [username] });
+        const row = result.rows[0];
         if (!row || !(await bcrypt.compare(password, row.password_hash)))
             return res.json({ success: false, message: 'Invalid credentials.' });
         if (row.business_role !== 'ADMIN' && row.status !== 'APPROVED')
@@ -158,23 +166,24 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-app.get('/api/shareholders/:id/dashboard', (req, res) => {
+app.get('/api/shareholders/:id/dashboard', async (req, res) => {
     try {
-        const sh = db.prepare(`SELECT * FROM shareholders WHERE id = ?`).get(req.params.id);
+        const shR = await db.execute({ sql: `SELECT * FROM shareholders WHERE id = ?`, args: [req.params.id] });
+        const sh = shR.rows[0];
         if (!sh) return res.status(404).json({ success: false, message: 'Shareholder not found' });
-        const subRows = db.prepare(`SELECT business_role, count FROM subscriber_counts`).all();
+        const subRows = await db.execute(`SELECT business_role, count FROM subscriber_counts`);
         const subscriberCounts = {};
         let totalSubscribers = 0;
-        subRows.forEach(r => { subscriberCounts[r.business_role] = r.count; totalSubscribers += r.count; });
-        const stage = getRunningStage();
-        const divRows = db.prepare(`SELECT * FROM dividend_history WHERE shareholder_id = ? ORDER BY paid_at DESC LIMIT 24`).all(sh.id);
-        const dividendHistory = divRows.map(d => ({
+        subRows.rows.forEach(r => { subscriberCounts[r.business_role] = r.count; totalSubscribers += r.count; });
+        const stage = await getRunningStage();
+        const divR = await db.execute({ sql: `SELECT * FROM dividend_history WHERE shareholder_id = ? ORDER BY paid_at DESC LIMIT 24`, args: [sh.id] });
+        const dividendHistory = divR.rows.map(d => ({
             month: new Date(d.paid_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'long' }),
             amount: d.amount, status: d.status
         }));
-        const prRows = db.prepare(`SELECT business_role, price FROM role_prices`).all();
+        const prR = await db.execute(`SELECT business_role, price FROM role_prices`);
         const rolePrices = {};
-        prRows.forEach(r => { rolePrices[r.business_role] = r.price; });
+        prR.rows.forEach(r => { rolePrices[r.business_role] = r.price; });
         res.json({ success: true, id: sh.id, fullName: sh.full_name, fatherName: sh.father_name, address: sh.address, pinCode: sh.pin_code, phone: sh.phone, email: sh.email, businessRole: sh.business_role, numShares: sh.num_shares, totalInvestment: sh.total_investment, pricePerShare: sh.price_per_share, investmentStage: sh.stage, status: sh.status, createdAt: sh.created_at, totalSubscribers, subscriberCounts, rolePrices, currentStage: stage, dividendHistory });
     } catch (err) {
         console.error('GET /api/shareholders/:id/dashboard:', err.message);
@@ -182,23 +191,27 @@ app.get('/api/shareholders/:id/dashboard', (req, res) => {
     }
 });
 
-app.get('/api/prices', (req, res) => {
+app.get('/api/prices', async (req, res) => {
     try {
-        const rows = db.prepare(`SELECT business_role, price FROM role_prices`).all();
+        const rows = await db.execute(`SELECT business_role, price FROM role_prices`);
         const prices = {};
-        rows.forEach(r => { prices[r.business_role] = r.price; });
+        rows.rows.forEach(r => { prices[r.business_role] = r.price; });
         res.json({ success: true, prices });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-app.put('/api/admin/prices', (req, res) => {
+app.put('/api/admin/prices', async (req, res) => {
     try {
         const { prices } = req.body;
         if (!prices) return res.status(400).json({ success: false, message: 'prices required' });
-        const stmt = db.prepare(`INSERT INTO role_prices (business_role, price, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(business_role) DO UPDATE SET price = excluded.price, updated_at = excluded.updated_at`);
-        for (const [role, price] of Object.entries(prices)) stmt.run(role, Number(price));
+        for (const [role, price] of Object.entries(prices)) {
+            await db.execute({
+                sql : `INSERT INTO role_prices (business_role, price, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(business_role) DO UPDATE SET price = excluded.price, updated_at = excluded.updated_at`,
+                args: [role, Number(price)]
+            });
+        }
         res.json({ success: true, message: 'Prices updated' });
     } catch (err) {
         console.error('PUT /api/admin/prices:', err.message);
@@ -206,34 +219,34 @@ app.put('/api/admin/prices', (req, res) => {
     }
 });
 
-app.get('/api/admin/dashboard', (req, res) => {
+app.get('/api/admin/dashboard', async (req, res) => {
     try {
-        const subRows = db.prepare(`SELECT business_role, count FROM subscriber_counts`).all();
+        const subRows = await db.execute(`SELECT business_role, count FROM subscriber_counts`);
         const subscriberCounts = {};
-        subRows.forEach(r => { subscriberCounts[r.business_role] = r.count; });
-        const priceRows = db.prepare(`SELECT business_role, price FROM role_prices`).all();
+        subRows.rows.forEach(r => { subscriberCounts[r.business_role] = r.count; });
+        const priceRows = await db.execute(`SELECT business_role, price FROM role_prices`);
         const rolePrices = {};
-        priceRows.forEach(r => { rolePrices[r.business_role] = r.price; });
-        const agreements = db.prepare(`
+        priceRows.rows.forEach(r => { rolePrices[r.business_role] = r.price; });
+        const agreements = await db.execute(`
             SELECT id, full_name, father_name, email, phone, address, pin_code,
                    business_role, num_shares, total_investment, price_per_share,
                    stage, status, photo_data, signature_data, username, created_at, approved_at
             FROM   shareholders
             WHERE  business_role != 'ADMIN'
             ORDER  BY CASE status WHEN 'PENDING' THEN 0 WHEN 'APPROVED' THEN 1 ELSE 2 END, created_at DESC
-        `).all();
-        console.log(`📊 Admin dashboard: Found ${agreements.length} agreements`);
-        res.json({ success: true, subscriberCounts, rolePrices, agreements });
+        `);
+        console.log(`📊 Admin dashboard: Found ${agreements.rows.length} agreements`);
+        res.json({ success: true, subscriberCounts, rolePrices, agreements: agreements.rows });
     } catch (err) {
         console.error('GET /api/admin/dashboard:', err.message);
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-app.put('/api/admin/subscribers', (req, res) => {
+app.put('/api/admin/subscribers', async (req, res) => {
     try {
         const { businessRole, count } = req.body;
-        db.prepare(`UPDATE subscriber_counts SET count = ?, updated_at = datetime('now') WHERE business_role = ?`).run(Number(count), businessRole);
+        await db.execute({ sql: `UPDATE subscriber_counts SET count = ?, updated_at = datetime('now') WHERE business_role = ?`, args: [Number(count), businessRole] });
         res.json({ success: true, message: 'Subscriber count updated' });
     } catch (err) {
         console.error('PUT /api/admin/subscribers:', err.message);
@@ -241,11 +254,11 @@ app.put('/api/admin/subscribers', (req, res) => {
     }
 });
 
-app.put('/api/admin/agreements/:id', (req, res) => {
+app.put('/api/admin/agreements/:id', async (req, res) => {
     try {
         const { status } = req.body;
         const approvedAt = status === 'APPROVED' ? new Date().toISOString() : null;
-        db.prepare(`UPDATE shareholders SET status = ?, approved_at = ? WHERE id = ?`).run(status, approvedAt, req.params.id);
+        await db.execute({ sql: `UPDATE shareholders SET status = ?, approved_at = ? WHERE id = ?`, args: [status, approvedAt, req.params.id] });
         console.log(`✅ Agreement ${req.params.id} updated to ${status}`);
         res.json({ success: true, message: `Status updated to ${status}` });
     } catch (err) {
@@ -254,13 +267,14 @@ app.put('/api/admin/agreements/:id', (req, res) => {
     }
 });
 
-app.delete('/api/admin/agreements/:id', (req, res) => {
+app.delete('/api/admin/agreements/:id', async (req, res) => {
     try {
-        const sh = db.prepare(`SELECT id, full_name, business_role FROM shareholders WHERE id = ?`).get(req.params.id);
+        const result = await db.execute({ sql: `SELECT id, full_name, business_role FROM shareholders WHERE id = ?`, args: [req.params.id] });
+        const sh = result.rows[0];
         if (!sh) return res.status(404).json({ success: false, message: 'Shareholder not found' });
         if (sh.business_role === 'ADMIN') return res.status(403).json({ success: false, message: 'Cannot delete admin account' });
-        db.prepare(`DELETE FROM dividend_history WHERE shareholder_id = ?`).run(req.params.id);
-        db.prepare(`DELETE FROM shareholders WHERE id = ?`).run(req.params.id);
+        await db.execute({ sql: `DELETE FROM dividend_history WHERE shareholder_id = ?`, args: [req.params.id] });
+        await db.execute({ sql: `DELETE FROM shareholders WHERE id = ?`, args: [req.params.id] });
         console.log(`🗑️ Agreement deleted: ${sh.full_name} (id=${req.params.id})`);
         res.json({ success: true, message: `Agreement for ${sh.full_name} deleted` });
     } catch (err) {
@@ -273,18 +287,19 @@ app.put('/api/admin/shareholders/:id/credentials', async (req, res) => {
     try {
         const { username, password } = req.body;
         if (!username && !password) return res.status(400).json({ success: false, message: 'username or password required' });
-        const sh = db.prepare(`SELECT id, username, business_role FROM shareholders WHERE id = ?`).get(req.params.id);
+        const result = await db.execute({ sql: `SELECT id, username, business_role FROM shareholders WHERE id = ?`, args: [req.params.id] });
+        const sh = result.rows[0];
         if (!sh) return res.status(404).json({ success: false, message: 'Shareholder not found' });
         if (sh.business_role === 'ADMIN') return res.status(403).json({ success: false, message: 'Cannot modify admin credentials here' });
         if (username && username !== sh.username) {
-            if (db.prepare('SELECT id FROM shareholders WHERE username = ? AND id != ?').get(username, req.params.id))
-                return res.status(400).json({ success: false, message: 'Username already taken' });
+            const eu = await db.execute({ sql: 'SELECT id FROM shareholders WHERE username = ? AND id != ?', args: [username, req.params.id] });
+            if (eu.rows.length > 0) return res.status(400).json({ success: false, message: 'Username already taken' });
         }
         const updates = [], args = [];
         if (username) { updates.push('username = ?'); args.push(username); }
-        if (password) { args.push(await bcrypt.hash(password, 10)); updates.push('password_hash = ?'); }
+        if (password) { const hash = await bcrypt.hash(password, 10); updates.push('password_hash = ?'); args.push(hash); }
         args.push(req.params.id);
-        db.prepare(`UPDATE shareholders SET ${updates.join(', ')} WHERE id = ?`).run(...args);
+        await db.execute({ sql: `UPDATE shareholders SET ${updates.join(', ')} WHERE id = ?`, args });
         console.log(`🔑 Credentials updated for shareholder id=${req.params.id}`);
         res.json({ success: true, message: 'Credentials updated successfully' });
     } catch (err) {
@@ -293,15 +308,16 @@ app.put('/api/admin/shareholders/:id/credentials', async (req, res) => {
     }
 });
 
-app.get('/api/admin/stages', (req, res) => {
+app.get('/api/admin/stages', async (req, res) => {
     try {
-        res.json({ success: true, stages: db.prepare(`SELECT * FROM investment_stages ORDER BY stage ASC`).all() });
+        const result = await db.execute(`SELECT * FROM investment_stages ORDER BY stage ASC`);
+        res.json({ success: true, stages: result.rows });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-app.put('/api/admin/stages/:id', (req, res) => {
+app.put('/api/admin/stages/:id', async (req, res) => {
     try {
         const { status, price_per_share, name, shares_available } = req.body;
         const fields = [], args = [];
@@ -311,36 +327,40 @@ app.put('/api/admin/stages/:id', (req, res) => {
         if (shares_available !== undefined) { fields.push('shares_available = ?'); args.push(Number(shares_available)); }
         if (fields.length === 0) return res.status(400).json({ success: false, message: 'Nothing to update' });
         args.push(req.params.id);
-        db.prepare(`UPDATE investment_stages SET ${fields.join(', ')} WHERE id = ?`).run(...args);
+        await db.execute({ sql: `UPDATE investment_stages SET ${fields.join(', ')} WHERE id = ?`, args });
         res.json({ success: true, message: 'Stage updated' });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-app.post('/api/admin/stages', (req, res) => {
+app.post('/api/admin/stages', async (req, res) => {
     try {
         const { stage, name, price_per_share, min_subscribers, max_subscribers, status, shares_available } = req.body;
         if (!stage || !name || !price_per_share) return res.status(400).json({ success: false, message: 'stage, name, price_per_share required' });
-        const result = db.prepare(`INSERT INTO investment_stages (stage, name, price_per_share, min_subscribers, max_subscribers, status, shares_available) VALUES (?,?,?,?,?,?,?)`)
-            .run(Number(stage), name, Number(price_per_share), Number(min_subscribers||0), Number(max_subscribers||0), status||'UPCOMING', Number(shares_available||0));
+        const result = await db.execute({
+            sql : `INSERT INTO investment_stages (stage, name, price_per_share, min_subscribers, max_subscribers, status, shares_available) VALUES (?,?,?,?,?,?,?)`,
+            args: [Number(stage), name, Number(price_per_share), Number(min_subscribers||0), Number(max_subscribers||0), status||'UPCOMING', Number(shares_available||0)]
+        });
         res.json({ success: true, message: 'Stage added', id: Number(result.lastInsertRowid) });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-app.get('/api/stages', (req, res) => {
+app.get('/api/stages', async (req, res) => {
     try {
-        res.json({ success: true, stages: db.prepare(`SELECT * FROM investment_stages ORDER BY stage ASC`).all() });
+        const result = await db.execute(`SELECT * FROM investment_stages ORDER BY stage ASC`);
+        res.json({ success: true, stages: result.rows });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-app.get('/api/shareholders/:id/details', (req, res) => {
+app.get('/api/shareholders/:id/details', async (req, res) => {
     try {
-        const sh = db.prepare(`SELECT id, full_name, father_name, address, pin_code, phone, email, business_role, num_shares, total_investment, price_per_share, stage, status, username, photo_data, signature_data, created_at, approved_at FROM shareholders WHERE id = ?`).get(req.params.id);
+        const result = await db.execute({ sql: `SELECT id, full_name, father_name, address, pin_code, phone, email, business_role, num_shares, total_investment, price_per_share, stage, status, username, photo_data, signature_data, created_at, approved_at FROM shareholders WHERE id = ?`, args: [req.params.id] });
+        const sh = result.rows[0];
         if (!sh) return res.status(404).json({ success: false, message: 'Shareholder not found' });
         res.json({ success: true, ...sh });
     } catch (err) {
@@ -351,7 +371,8 @@ app.get('/api/shareholders/:id/details', (req, res) => {
 
 app.post('/api/admin/agreements/:id/pdf', async (req, res) => {
     try {
-        const s = db.prepare(`SELECT * FROM shareholders WHERE id = ?`).get(req.params.id);
+        const result = await db.execute({ sql: `SELECT * FROM shareholders WHERE id = ?`, args: [req.params.id] });
+        const s = result.rows[0];
         if (!s) return res.status(404).json({ success: false, message: 'Shareholder not found' });
 
         const doc = new PDFDocument({ margin: 0, size: 'A4', autoFirstPage: true });
@@ -468,17 +489,18 @@ app.post('/api/admin/agreements/:id/pdf', async (req, res) => {
 });
 
 // ==================== START ====================
-try {
-    initializeDatabase();
-    app.listen(PORT, () => {
-        console.log(`\n${'═'.repeat(52)}`);
-        console.log(`🚀  Quick Ride  →  http://localhost:${PORT}`);
-        console.log(`📂  DB          →  quickride.db (local SQLite)`);
-        console.log(`${'═'.repeat(52)}`);
-        console.log(`🔑  Admin  →  username: admin  |  password: Qc@242526`);
-        console.log(`${'═'.repeat(52)}\n`);
+initializeDatabase()
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`\n${'═'.repeat(52)}`);
+            console.log(`🚀  Quick Ride  →  http://localhost:${PORT}`);
+            console.log(`📂  DB          →  ${process.env.TURSO_URL ? 'Turso Cloud' : 'quickride.db (local)'}`);
+            console.log(`${'═'.repeat(52)}`);
+            console.log(`🔑  Admin  →  username: admin  |  password: Qc@242526`);
+            console.log(`${'═'.repeat(52)}\n`);
+        });
+    })
+    .catch(err => {
+        console.error('❌ Failed to initialize database:', err.message);
+        process.exit(1);
     });
-} catch (err) {
-    console.error('❌ Failed to initialize database:', err.message);
-    process.exit(1);
-}
