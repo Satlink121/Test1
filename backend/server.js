@@ -396,6 +396,14 @@ app.post('/api/admin/agreements/:id/pdf', async (req, res) => {
         const now=new Date(), sigDate=now.toLocaleDateString('en-IN');
         const agreementId=`QR-${String(s.id).padStart(5,'0')}`;
 
+        const drawWatermark = () => {
+            doc.save();
+            doc.translate(pageW/2, pageH/2);
+            doc.rotate(-45);
+            doc.fontSize(72).font('Helvetica-Bold').fillColor('#1e1b4b').opacity(0.045)
+               .text('QUICK RIDE', 0, 0, {lineBreak:false, align:'center'});
+            doc.opacity(1).restore();
+        };
         const drawHeader = () => {
             doc.rect(0,0,pageW,HEADER_H).fill('#1e1b4b');
             doc.fontSize(20).font('Helvetica-Bold').fillColor('white').text('QUICK RIDE',M,14,{width:CW,align:'center'});
@@ -406,9 +414,10 @@ app.post('/api/admin/agreements/:id/pdf', async (req, res) => {
         };
         const drawFooter = () => {
             doc.rect(0,pageH-FOOTER_H,pageW,FOOTER_H).fill('#f3f4f6');
-            doc.fontSize(7).font('Helvetica').fillColor('#6b7280').text(`© ${now.getFullYear()} Quick Ride (Sikkim Division)  •  ${agreementId}  •  Page ${pageNum}`,M,pageH-FOOTER_H+7,{width:CW,align:'center'});
+            doc.fontSize(7).font('Helvetica').fillColor('#6b7280')
+               .text(`© ${now.getFullYear()} Quick Ride  •  ${agreementId}  •  Page ${pageNum}`,M,pageH-FOOTER_H+7,{width:CW,align:'center'});
         };
-        const newPage = () => { drawFooter(); doc.addPage({margin:0,size:'A4'}); pageNum++; drawHeader(); drawFooter(); cy=BODY_TOP; };
+        const newPage = () => { drawFooter(); doc.addPage({margin:0,size:'A4'}); pageNum++; drawHeader(); drawWatermark(); drawFooter(); cy=BODY_TOP; };
         const ensureSpace = (n) => { if(cy+n>BODY_BOT) newPage(); };
         const section = (title) => { ensureSpace(22); doc.rect(M,cy,CW,20).fill('#1e1b4b'); doc.fontSize(9).font('Helvetica-Bold').fillColor('white').text(title,M+8,cy+6,{width:CW-16,lineBreak:false}); cy+=24; };
 
@@ -433,7 +442,7 @@ app.post('/api/admin/agreements/:id/pdf', async (req, res) => {
             cy=doc.y+5;
         };
 
-        drawHeader(); drawFooter();
+        drawHeader(); drawWatermark(); drawFooter();
         doc.roundedRect(M,cy,CW,26,3).fill('#f3f4f6');
         doc.fontSize(7.5).font('Helvetica').fillColor('#6b7280')
            .text(`Agreement ID: ${agreementId}`,M+8,cy+9,{width:CW/3,lineBreak:false})
@@ -461,12 +470,18 @@ app.post('/api/admin/agreements/:id/pdf', async (req, res) => {
         termBlock(6,'Investment Risks & Acknowledgement','This investment carries significant financial risk. Returns, profits, and dividends are not guaranteed. Dividends depend entirely on business performance, subscriber growth, and market conditions. Share value may fluctuate. This is a long-term investment and early exit may not be possible. Investors may lose part or all of their invested capital. Startup and early-stage investments are inherently high-risk. The Company and its representatives shall not be liable for any financial loss arising from this investment. By signing this agreement, the investor confirms independent due diligence and voluntary participation at their own risk.');
         termBlock(7,'Transparency & Reporting','The Company shall maintain transparent accounting practices and provide periodic financial summaries to shareholders. Clear reporting of revenue, expenses, and net profit shall be shared; however, full management discretion shall prevail in all operational and strategic decisions. Financial reports shall be made available to shareholders at least once per financial year or upon reasonable written request, subject to confidentiality obligations of the Company.');
 
-        section('4. Investor Declaration'); cy+=4; ensureSpace(52);
+        section('4. Legal Disclaimer & Risk Disclosure'); cy+=4;
+        termBlock(1,'Private Contractual Arrangement','This opportunity is a private contractual business participation arrangement offered and managed solely by Quick Ride. Quick Ride is not registered with, regulated by, or affiliated with the Securities and Exchange Board of India (SEBI) or any other governmental, statutory, or financial regulatory authority in India or abroad in relation to this participation model.');
+        termBlock(2,'Nature of This Offering','This offering: (a) Is NOT an Initial Public Offering (IPO); (b) Is NOT publicly listed, exchange-traded, or transferable; (c) Does NOT constitute shares, securities, debentures, collective investment schemes, deposits, mutual funds, or any regulated financial instrument under applicable law; (d) Is a private internal profit-participation arrangement only.');
+        termBlock(3,'Fund Management','All funds contributed are managed, utilized, and controlled exclusively by Quick Ride under its independent internal business framework. The Company exercises full discretion over the deployment, management, and utilization of contributed funds in accordance with its business objectives.');
+        termBlock(4,'Representational Nature of "Share" Units','The term "share" or similar references used in this agreement are purely representational accounting units created for transparent profit allocation purposes only. They do not confer legal ownership, equity rights, voting rights, partnership rights, or statutory shareholder status unless separately documented under applicable corporate law. Participants acknowledge this explicitly by signing below.');
+
+        section('5. Investor Declaration'); cy+=4; ensureSpace(52);
         doc.fontSize(8).font('Helvetica').fillColor('#374151').text('I, the undersigned, hereby confirm that I have read, understood, and voluntarily agree to all the terms and conditions set forth in this Shareholder Investment Agreement. I confirm that all information provided by me in this application is true, complete, and accurate to the best of my knowledge. I acknowledge that this is a high-risk investment with no guarantee of returns, profits, dividends, or capital protection. I understand that startup and early-stage investments may result in partial or total loss of invested capital. I expressly agree that the Company and its representatives shall not be liable for any financial loss arising from this investment. I have conducted independent due diligence and, where required, consulted qualified financial and legal advisors before making this investment decision. This investment is made freely, voluntarily, and entirely at my own risk.',M,cy,{width:CW,align:'justify',lineGap:2});
         cy=doc.y+8;
         ensureSpace(22); doc.roundedRect(M,cy,CW,20,3).fill('#fefce8'); doc.fontSize(7).font('Helvetica-Bold').fillColor('#92400e').text('IMPORTANT: This document is legally valid only when signed by both parties below.',M+8,cy+6,{width:CW-16,lineBreak:false}); cy+=26;
 
-        ensureSpace(110); section('5. Manual Signatures'); cy+=6;
+        ensureSpace(110); section('6. Manual Signatures'); cy+=6;
         const sigPanelW=(CW-16)/2, sigPanelH=90, investorX=M, authorityX=M+sigPanelW+16;
 
         doc.roundedRect(investorX,cy,sigPanelW,sigPanelH,4).fill('#f0fdf4');
@@ -482,14 +497,14 @@ app.post('/api/admin/agreements/:id/pdf', async (req, res) => {
         doc.roundedRect(authorityX,cy,sigPanelW,sigPanelH,4).fill('#eff6ff');
         doc.roundedRect(authorityX,cy,sigPanelW,sigPanelH,4).lineWidth(0.8).stroke('#2563eb');
         doc.fontSize(8).font('Helvetica-Bold').fillColor('#1e3a8a').text('AUTHORITY SIGNATURE',authorityX+8,cy+8,{width:sigPanelW-16,lineBreak:false});
-        doc.fontSize(7.5).font('Helvetica').fillColor('#374151').text('Quick Ride (Sikkim Division)',authorityX+8,cy+22,{width:sigPanelW-16,lineBreak:false}).text(`Date: ${sigDate}`,authorityX+8,cy+34,{width:sigPanelW-16,lineBreak:false});
+        doc.fontSize(7.5).font('Helvetica').fillColor('#374151').text('Quick Ride',authorityX+8,cy+22,{width:sigPanelW-16,lineBreak:false}).text(`Date: ${sigDate}`,authorityX+8,cy+34,{width:sigPanelW-16,lineBreak:false});
         doc.moveTo(authorityX+8,cy+68).lineTo(authorityX+sigPanelW-8,cy+68).lineWidth(1).stroke('#2563eb');
         doc.fontSize(7).font('Helvetica').fillColor('#9ca3af').text('(Authorised Signatory)',authorityX+8,cy+56,{width:sigPanelW-16,align:'center',lineBreak:false});
         doc.fontSize(7).font('Helvetica').fillColor('#6b7280').text('Signature',authorityX+8,cy+72,{width:sigPanelW-16,align:'center',lineBreak:false});
         cy+=sigPanelH+10;
 
         ensureSpace(16);
-        doc.fontSize(7).font('Helvetica').fillColor('#6b7280').text('Quick Ride Office: Burtuk, Helipad Gangtok, 737101, East District, Sikkim  |  Phone: +91 9932369890  |  Email: quickridesk@gmail.com',M,cy,{width:CW,align:'center',lineBreak:false});
+        doc.fontSize(7).font('Helvetica').fillColor('#6b7280').text('Quick Ride Office: Burtuk, Helipad Gangtok, 737101, East District, Sikkim  |  Phone: +91 9932369890  |  Email: quickcab2026@gmail.com',M,cy,{width:CW,align:'center',lineBreak:false});
         cy+=14; drawFooter(); doc.end();
 
     } catch (err) {
