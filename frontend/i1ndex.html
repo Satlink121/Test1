@@ -185,7 +185,7 @@
 </head>
 <body class="bg-gray-900 text-gray-100">
     <div id="root"></div>
-	<audio id="quickRideAudio" src="123.mp3" preload="auto"></audio>
+	<audio id="quickRideAudio" src="frontend/123.mp3" preload="auto"></audio>
     
 	<script type="text/babel">
         // ==================== API CONFIGURATION ====================
@@ -1221,7 +1221,7 @@
                     <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${playing ? 'bg-indigo-400' : 'bg-pink-500'}`}>
                         {playing ? '⏹' : '▶'}
                     </span>
-                    <span>{playing ? 'Stop Audio' : 'Play Me'}</span>
+                    <span>{playing ? 'Stop Audio' : '🎵 Play Intro'}</span>
                 </button>
             );
         };
