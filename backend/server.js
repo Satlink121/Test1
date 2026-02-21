@@ -11,10 +11,14 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use(express.static(__dirname));
+
+// Static files only for non-API routes (prevents HTML being returned for API calls)
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    express.static(__dirname)(req, res, next);
+});
 
 // ==================== DATABASE SETUP ====================
-// Uses Turso if TURSO_URL is set (production), otherwise local SQLite file (local dev)
 const { createClient } = require('@libsql/client');
 const db = createClient(
     process.env.TURSO_URL
@@ -25,82 +29,83 @@ console.log(process.env.TURSO_URL ? '✅ Turso DB connected' : '✅ Local SQLite
 
 // ==================== SCHEMA ====================
 async function initializeDatabase() {
-    await db.executeMultiple(`
-        CREATE TABLE IF NOT EXISTS shareholders (
-            id               INTEGER PRIMARY KEY AUTOINCREMENT,
-            full_name        TEXT    NOT NULL,
-            father_name      TEXT    NOT NULL DEFAULT '',
-            address          TEXT    NOT NULL,
-            pin_code         TEXT    NOT NULL DEFAULT '',
-            phone            TEXT    NOT NULL,
-            email            TEXT    NOT NULL UNIQUE,
-            business_role    TEXT    NOT NULL,
-            num_shares       INTEGER NOT NULL DEFAULT 0,
-            username         TEXT    NOT NULL UNIQUE,
-            password_hash    TEXT    NOT NULL,
-            photo_data       TEXT,
-            signature_data   TEXT,
-            total_investment REAL    NOT NULL DEFAULT 0,
-            price_per_share  REAL    NOT NULL DEFAULT 1200,
-            stage            INTEGER NOT NULL DEFAULT 2,
-            status           TEXT    NOT NULL DEFAULT 'PENDING',
-            created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
-            approved_at      TEXT
-        );
-        CREATE TABLE IF NOT EXISTS subscriber_counts (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            business_role TEXT    NOT NULL UNIQUE,
-            count         INTEGER NOT NULL DEFAULT 0,
-            updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
-        );
-        CREATE TABLE IF NOT EXISTS dividend_history (
-            id             INTEGER PRIMARY KEY AUTOINCREMENT,
-            shareholder_id INTEGER NOT NULL REFERENCES shareholders(id),
-            month          TEXT    NOT NULL,
-            gross_amount   REAL    NOT NULL DEFAULT 0,
-            gst_rate       REAL    NOT NULL DEFAULT 0,
-            amount         REAL    NOT NULL,
-            payment_method TEXT    NOT NULL DEFAULT 'Bank Transfer',
-            status         TEXT    NOT NULL DEFAULT 'PAID',
-            paid_at        TEXT    NOT NULL DEFAULT (datetime('now'))
-        );
-        CREATE TABLE IF NOT EXISTS role_prices (
-            business_role TEXT NOT NULL PRIMARY KEY,
-            price         REAL NOT NULL DEFAULT 350,
-            updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
-        );
-        CREATE TABLE IF NOT EXISTS investment_stages (
-            id               INTEGER PRIMARY KEY AUTOINCREMENT,
-            stage            INTEGER NOT NULL,
-            name             TEXT    NOT NULL,
-            price_per_share  REAL    NOT NULL,
-            min_subscribers  INTEGER NOT NULL,
-            max_subscribers  INTEGER NOT NULL,
-            status           TEXT    NOT NULL,
-            shares_available INTEGER NOT NULL DEFAULT 0
-        );
-    `);
+    // Turso HTTP API does NOT support executeMultiple — each statement sent individually
+    await db.execute(`CREATE TABLE IF NOT EXISTS shareholders (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        full_name        TEXT    NOT NULL,
+        father_name      TEXT    NOT NULL DEFAULT '',
+        address          TEXT    NOT NULL,
+        pin_code         TEXT    NOT NULL DEFAULT '',
+        phone            TEXT    NOT NULL,
+        email            TEXT    NOT NULL UNIQUE,
+        business_role    TEXT    NOT NULL,
+        num_shares       INTEGER NOT NULL DEFAULT 0,
+        username         TEXT    NOT NULL UNIQUE,
+        password_hash    TEXT    NOT NULL,
+        photo_data       TEXT,
+        signature_data   TEXT,
+        total_investment REAL    NOT NULL DEFAULT 0,
+        price_per_share  REAL    NOT NULL DEFAULT 1200,
+        stage            INTEGER NOT NULL DEFAULT 2,
+        status           TEXT    NOT NULL DEFAULT 'PENDING',
+        created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+        approved_at      TEXT
+    )`);
 
-    // Migrate existing DBs: add gst columns if missing (safe – ignored if already exist)
+    await db.execute(`CREATE TABLE IF NOT EXISTS subscriber_counts (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        business_role TEXT    NOT NULL UNIQUE,
+        count         INTEGER NOT NULL DEFAULT 0,
+        updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+    )`);
+
+    await db.execute(`CREATE TABLE IF NOT EXISTS dividend_history (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        shareholder_id INTEGER NOT NULL REFERENCES shareholders(id),
+        month          TEXT    NOT NULL,
+        gross_amount   REAL    NOT NULL DEFAULT 0,
+        gst_rate       REAL    NOT NULL DEFAULT 0,
+        amount         REAL    NOT NULL,
+        payment_method TEXT    NOT NULL DEFAULT 'Bank Transfer',
+        status         TEXT    NOT NULL DEFAULT 'PAID',
+        paid_at        TEXT    NOT NULL DEFAULT (datetime('now'))
+    )`);
+
+    await db.execute(`CREATE TABLE IF NOT EXISTS role_prices (
+        business_role TEXT NOT NULL PRIMARY KEY,
+        price         REAL NOT NULL DEFAULT 350,
+        updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    )`);
+
+    await db.execute(`CREATE TABLE IF NOT EXISTS investment_stages (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        stage            INTEGER NOT NULL,
+        name             TEXT    NOT NULL,
+        price_per_share  REAL    NOT NULL,
+        min_subscribers  INTEGER NOT NULL,
+        max_subscribers  INTEGER NOT NULL,
+        status           TEXT    NOT NULL,
+        shares_available INTEGER NOT NULL DEFAULT 0
+    )`);
+
+    // Safe migrations for existing databases (ignored if column already exists)
     try { await db.execute(`ALTER TABLE dividend_history ADD COLUMN gross_amount REAL NOT NULL DEFAULT 0`); } catch(_) {}
     try { await db.execute(`ALTER TABLE dividend_history ADD COLUMN gst_rate REAL NOT NULL DEFAULT 0`); } catch(_) {}
     try { await db.execute(`ALTER TABLE dividend_history ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'Bank Transfer'`); } catch(_) {}
 
-    await db.executeMultiple(` (business_role, count) VALUES ('DRIVER', 0);
-        INSERT OR IGNORE INTO subscriber_counts (business_role, count) VALUES ('TRAVEL_AGENT', 0);
-        INSERT OR IGNORE INTO subscriber_counts (business_role, count) VALUES ('SHOPS_HOTELS', 0);
-        INSERT OR IGNORE INTO role_prices (business_role, price) VALUES ('DRIVER', 350);
-        INSERT OR IGNORE INTO role_prices (business_role, price) VALUES ('TRAVEL_AGENT', 500);
-        INSERT OR IGNORE INTO role_prices (business_role, price) VALUES ('SHOPS_HOTELS', 700);
-    `);
+    // Seed default data
+    await db.execute(`INSERT OR IGNORE INTO subscriber_counts (business_role, count) VALUES ('DRIVER', 0)`);
+    await db.execute(`INSERT OR IGNORE INTO subscriber_counts (business_role, count) VALUES ('TRAVEL_AGENT', 0)`);
+    await db.execute(`INSERT OR IGNORE INTO subscriber_counts (business_role, count) VALUES ('SHOPS_HOTELS', 0)`);
+    await db.execute(`INSERT OR IGNORE INTO role_prices (business_role, price) VALUES ('DRIVER', 350)`);
+    await db.execute(`INSERT OR IGNORE INTO role_prices (business_role, price) VALUES ('TRAVEL_AGENT', 500)`);
+    await db.execute(`INSERT OR IGNORE INTO role_prices (business_role, price) VALUES ('SHOPS_HOTELS', 700)`);
 
     const stageCount = await db.execute(`SELECT COUNT(*) AS n FROM investment_stages`);
     if (stageCount.rows[0].n === 0) {
-        await db.executeMultiple(`
-            INSERT INTO investment_stages (stage, name, price_per_share, min_subscribers, max_subscribers, status, shares_available) VALUES (1, 'Base Price', 1000, 0, 1500, 'SOLD_OUT', 0);
-            INSERT INTO investment_stages (stage, name, price_per_share, min_subscribers, max_subscribers, status, shares_available) VALUES (2, 'Current Price', 1200, 1501, 5000, 'RUNNING', 100);
-            INSERT INTO investment_stages (stage, name, price_per_share, min_subscribers, max_subscribers, status, shares_available) VALUES (3, 'Next Price', 1440, 5001, 15000, 'UPCOMING', 100);
-        `);
+        await db.execute(`INSERT INTO investment_stages (stage, name, price_per_share, min_subscribers, max_subscribers, status, shares_available) VALUES (1, 'Base Price', 1000, 0, 1500, 'SOLD_OUT', 0)`);
+        await db.execute(`INSERT INTO investment_stages (stage, name, price_per_share, min_subscribers, max_subscribers, status, shares_available) VALUES (2, 'Current Price', 1200, 1501, 5000, 'RUNNING', 100)`);
+        await db.execute(`INSERT INTO investment_stages (stage, name, price_per_share, min_subscribers, max_subscribers, status, shares_available) VALUES (3, 'Next Price', 1440, 5001, 15000, 'UPCOMING', 100)`);
         console.log('✅ Investment stages seeded');
     }
 
@@ -184,12 +189,7 @@ app.get('/api/shareholders/:id/dashboard', async (req, res) => {
         const divR = await db.execute({ sql: `SELECT * FROM dividend_history WHERE shareholder_id = ? ORDER BY paid_at DESC LIMIT 24`, args: [sh.id] });
         const dividendHistory = divR.rows.map(d => ({
             month: new Date(d.paid_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'long' }),
-            paidAt: new Date(d.paid_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-            grossAmount: d.gross_amount || d.amount,
-            gstRate: d.gst_rate || 0,
-            amount: d.amount,
-            paymentMethod: d.payment_method || 'Bank Transfer',
-            status: d.status
+            amount: d.amount, status: d.status
         }));
         const prR = await db.execute(`SELECT business_role, price FROM role_prices`);
         const rolePrices = {};
@@ -498,65 +498,63 @@ app.post('/api/admin/agreements/:id/pdf', async (req, res) => {
     }
 });
 
-// ==================== DIVIDEND ROUTES ====================
-
-// Pay dividend to one shareholder
+// POST /api/admin/dividends — pay a single shareholder
 app.post('/api/admin/dividends', async (req, res) => {
     try {
         const { shareholderId, month, amount, gstRate, paymentMethod } = req.body;
-        if (!shareholderId || !month || !amount)
-            return res.status(400).json({ success: false, message: 'shareholderId, month, and amount are required' });
-        const sh = await db.execute({ sql: `SELECT id, full_name, status FROM shareholders WHERE id = ?`, args: [Number(shareholderId)] });
-        if (!sh.rows[0]) return res.status(404).json({ success: false, message: 'Shareholder not found' });
-        if (sh.rows[0].status !== 'APPROVED') return res.status(400).json({ success: false, message: 'Shareholder is not approved' });
-        const grossAmount = Number(amount);
-        const gst = Number(gstRate) || 0;
-        const gstDeducted = Math.round((grossAmount * gst / 100) * 100) / 100;
-        const netAmount = Math.round((grossAmount - gstDeducted) * 100) / 100;
-        const method = paymentMethod || 'Bank Transfer';
+        if (!shareholderId || !month || !amount || amount <= 0) {
+            return res.json({ success: false, message: 'shareholderId, month, and amount are required' });
+        }
+        const shR = await db.execute({ sql: `SELECT id FROM shareholders WHERE id = ? AND status = 'APPROVED'`, args: [shareholderId] });
+        if (!shR.rows.length) return res.json({ success: false, message: 'Shareholder not found or not approved' });
+        const gst = Math.max(0, Number(gstRate) || 0);
+        const gross = Number(amount);
+        const gstAmt = Math.round(gross * gst / 100 * 100) / 100;
+        const net = Math.round((gross - gstAmt) * 100) / 100;
         await db.execute({
-            sql : `INSERT INTO dividend_history (shareholder_id, month, gross_amount, gst_rate, amount, payment_method, status, paid_at) VALUES (?, ?, ?, ?, ?, ?, 'PAID', datetime('now'))`,
-            args: [Number(shareholderId), month, grossAmount, gst, netAmount, method]
+            sql: `INSERT INTO dividend_history (shareholder_id, month, gross_amount, gst_rate, amount, payment_method, status, paid_at) VALUES (?, ?, ?, ?, ?, ?, 'PAID', datetime('now'))`,
+            args: [shareholderId, month, gross, gst, net, paymentMethod || 'Bank Transfer']
         });
-        console.log(`💸 Dividend gross=₹${grossAmount} GST=${gst}% net=₹${netAmount} via ${method} recorded for ${sh.rows[0].full_name} — ${month}`);
-        res.json({ success: true, message: `Dividend recorded for ${sh.rows[0].full_name}`, grossAmount, gstDeducted, netAmount });
+        res.json({ success: true, message: 'Dividend recorded successfully', net, gross, gstAmt });
     } catch (err) {
         console.error('POST /api/admin/dividends:', err.message);
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-// Auto-pay all approved shareholders proportionally from a net profit amount
+// POST /api/admin/dividends/all — auto-pay all approved shareholders by share %
 app.post('/api/admin/dividends/all', async (req, res) => {
     try {
         const { month, amount, gstRate, paymentMethod } = req.body;
-        if (!month || !amount)
-            return res.status(400).json({ success: false, message: 'month and amount (net profit) are required' });
-        const grossTotal = Number(amount);
-        const gst = Number(gstRate) || 0;
-        const method = paymentMethod || 'Bank Transfer';
-        const shareholders = await db.execute(`SELECT id, full_name, num_shares FROM shareholders WHERE status = 'APPROVED' AND business_role != 'ADMIN'`);
-        if (shareholders.rows.length === 0)
-            return res.json({ success: true, message: 'No approved shareholders found', count: 0 });
-        const totalShares = shareholders.rows.reduce((sum, sh) => sum + sh.num_shares, 0);
-        if (totalShares === 0) return res.status(400).json({ success: false, message: 'Total shares is 0, cannot distribute' });
-        let count = 0;
-        for (const sh of shareholders.rows) {
-            const shGross = Math.round((sh.num_shares / totalShares) * grossTotal * 100) / 100;
-            const shGstDeducted = Math.round((shGross * gst / 100) * 100) / 100;
-            const shNet = Math.round((shGross - shGstDeducted) * 100) / 100;
-            await db.execute({
-                sql : `INSERT INTO dividend_history (shareholder_id, month, gross_amount, gst_rate, amount, payment_method, status, paid_at) VALUES (?, ?, ?, ?, ?, ?, 'PAID', datetime('now'))`,
-                args: [sh.id, month, shGross, gst, shNet, method]
-            });
-            count++;
+        if (!month || !amount || amount <= 0) {
+            return res.json({ success: false, message: 'month and amount are required' });
         }
-        console.log(`💸 Auto-paid dividends from gross ₹${grossTotal} GST=${gst}% to ${count} shareholders — ${month}`);
-        res.json({ success: true, message: `Dividends paid to ${count} shareholders`, count });
+        const shR = await db.execute(`SELECT id, num_shares FROM shareholders WHERE status = 'APPROVED'`);
+        const shareholders = shR.rows;
+        if (!shareholders.length) return res.json({ success: false, message: 'No approved shareholders found' });
+        const totalShares = shareholders.reduce((s, sh) => s + (sh.num_shares || 0), 0);
+        const gst = Math.max(0, Number(gstRate) || 0);
+        const totalGross = Number(amount);
+        for (const sh of shareholders) {
+            const shareRatio = (sh.num_shares || 0) / totalShares;
+            const gross = Math.round(totalGross * shareRatio * 100) / 100;
+            const gstAmt = Math.round(gross * gst / 100 * 100) / 100;
+            const net = Math.round((gross - gstAmt) * 100) / 100;
+            await db.execute({
+                sql: `INSERT INTO dividend_history (shareholder_id, month, gross_amount, gst_rate, amount, payment_method, status, paid_at) VALUES (?, ?, ?, ?, ?, ?, 'PAID', datetime('now'))`,
+                args: [sh.id, month, gross, gst, net, paymentMethod || 'Bank Transfer']
+            });
+        }
+        res.json({ success: true, count: shareholders.length, message: `Dividend paid to ${shareholders.length} shareholders` });
     } catch (err) {
         console.error('POST /api/admin/dividends/all:', err.message);
         res.status(500).json({ success: false, message: err.message });
     }
+});
+
+// Catch-all: unmatched /api/* routes return JSON (never HTML)
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ success: false, message: `Not found: ${req.method} ${req.originalUrl}` });
 });
 
 // ==================== START ====================

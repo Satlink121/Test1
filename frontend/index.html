@@ -1911,7 +1911,6 @@
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {[
                                             { label: 'Shareholder ID', value: `QR-${String(dashboardData.id).padStart(4,'0')}` },
-                                            { label: 'Business Category', value: dashboardData.businessRole?.replace('_',' ') },
                                             { label: 'Shares Purchased', value: `${dashboardData.numShares} shares` },
                                             { label: 'Purchase Price per Share', value: `₹${dashboardData.pricePerShare?.toLocaleString('en-IN')}` },
                                             { label: 'Total Amount Invested', value: formatCurrency(dashboardData.totalInvestment), highlight: true },
@@ -1927,30 +1926,6 @@
                                     </div>
                                 </div>
 
-                                {/* How Your Earnings Work */}
-                                <div className="glass-morphism rounded-2xl p-5 md:p-7">
-                                    <h2 className="text-base md:text-lg font-black text-white mb-2 flex items-center gap-2">
-                                        <span>📈</span> How Your Earnings Are Calculated
-                                    </h2>
-                                    <p className="text-xs text-gray-500 mb-5">Based on current live subscriber data. Estimates update automatically.</p>
-                                    <div className="space-y-3">
-                                        {[
-                                            { label: 'Total Monthly Platform Revenue', value: formatCurrency(monthlyRevenue), color: 'text-white', bg: 'bg-gray-800/60' },
-                                            { label: '25% Operational Reserve (deducted)', value: `− ${formatCurrency(monthlyRevenue * 0.25)}`, color: 'text-rose-400', bg: 'bg-rose-900/10 border border-rose-900/30' },
-                                            { label: '75% Net Profit (distributable)', value: formatCurrency(netProfit), color: 'text-emerald-400', bg: 'bg-emerald-900/10 border border-emerald-900/30' },
-                                            { label: `Your share (${ownershipPct}% × net profit)`, value: `≈ ${formatCurrency(shareholderMonthly)} / month`, color: 'text-indigo-300', bg: 'bg-indigo-900/20 border border-indigo-800/40' },
-                                            { label: 'Estimated Annual Dividend', value: `≈ ${formatCurrency(shareholderYearly)} / year`, color: 'text-amber-300', bg: 'bg-amber-900/20 border border-amber-800/40' },
-                                        ].map((row, i) => (
-                                            <div key={i} className={`flex justify-between items-center py-3 px-4 rounded-xl ${row.bg}`}>
-                                                <span className="text-xs md:text-sm text-gray-400 flex-1 pr-4">{row.label}</span>
-                                                <span className={`text-xs md:text-sm font-black ${row.color} whitespace-nowrap`}>{row.value}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <p className="text-[10px] text-gray-600 mt-4 leading-relaxed">
-                                        ⚠️ Estimates are based on current subscriber count and are not guaranteed returns. Actual dividends are paid by the admin as recorded in Dividend History.
-                                    </p>
-                                </div>
 
                                 {/* Latest Dividend (if any) */}
                                 {dividendHistory.length > 0 && (() => {
@@ -2217,6 +2192,7 @@
             const [showAddStage, setShowAddStage] = React.useState(false);
             const [newStageData, setNewStageData] = React.useState({ stage: '', name: '', price_per_share: '', min_subscribers: '', max_subscribers: '', shares_available: '', status: 'UPCOMING' });
             const [stageActionLoading, setStageActionLoading] = React.useState(false);
+            const [adminTab, setAdminTab] = React.useState('business');
             const [dividendMode, setDividendMode] = React.useState('single'); // 'single' | 'all'
             const [dividendSH, setDividendSH] = React.useState('');
             const [dividendMonth, setDividendMonth] = React.useState(() => {
@@ -2420,544 +2396,411 @@
             const financials = calculateFinancials({ counts: subscriberCounts, prices: rolePrices });
 
             return (
-                <div className="container mx-auto px-4 py-4 md:py-8 space-y-4 md:space-y-8">
-                    {/* Header */}
-                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                            <h1 className="text-xl md:text-3xl font-black text-white mb-2">Administrator Dashboard</h1>
-                            <p className="text-sm md:text-base text-gray-400">Manage subscribers and approvals</p>
-                        </div>
-                        <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4 w-full md:w-auto">
-                            <div className={`flex items-center gap-2 px-2 md:px-3 py-1 rounded-full text-[10px] md:text-xs font-bold ${serverOnline ? 'bg-emerald-900/50 text-emerald-300' : 'bg-rose-900/50 text-rose-300'}`}>
-                                <span className={`w-1.5 md:w-2 h-1.5 md:h-2 rounded-full ${serverOnline ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
-                                {serverOnline ? 'Server Online' : 'Offline'}
+                <div className="min-h-screen bg-gray-900">
+                    {/* Top Nav */}
+                    <nav className="glass-morphism border-b border-gray-800 sticky top-0 z-40">
+                        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <img src="123.png" alt="Quick Ride" className="h-8 object-contain" />
+                                <div className="hidden md:block">
+                                    <p className="text-white font-bold text-sm leading-tight">Quick Ride</p>
+                                    <p className="text-gray-500 text-xs">Admin Portal</p>
+                                </div>
                             </div>
-                            <button
-                                onClick={onLogout}
-                                className="w-full md:w-auto px-4 md:px-6 py-2 md:py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl transition-all text-sm md:text-base"
-                            >
-                                Logout
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${serverOnline ? 'bg-emerald-900/50 text-emerald-300' : 'bg-rose-900/50 text-rose-300'}`}>
+                                    <span className={`w-2 h-2 rounded-full ${serverOnline ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`}></span>
+                                    {serverOnline ? 'Online' : 'Offline'}
+                                </div>
+                                <button onClick={onLogout} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg text-xs transition-all">Logout</button>
+                            </div>
                         </div>
-                    </div>
+                        {/* Tab bar */}
+                        <div className="container mx-auto px-4 flex gap-1 overflow-x-auto pb-0">
+                            {[
+                                { id: 'business', label: 'Overview & Metrics', icon: '💰' },
+                                { id: 'dividends', label: 'Dividend Management', icon: '💸' },
+                                { id: 'agreements', label: 'Investor Agreements', icon: '📋' },
+                            ].map(t => (
+                                <button key={t.id} onClick={() => setAdminTab(t.id)}
+                                    className={`flex items-center gap-1.5 px-4 py-2.5 text-xs md:text-sm font-bold border-b-2 transition-all whitespace-nowrap ${adminTab === t.id ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
+                                    <span>{t.icon}</span><span>{t.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </nav>
 
                     {!serverOnline && (
-                        <div className="bg-rose-900/30 border border-rose-700 rounded-2xl p-4 md:p-6 text-center space-y-2">
-                            <p className="text-rose-300 font-bold text-sm md:text-lg">⚠️ Cannot connect to server</p>
-                            <button onClick={loadAdminData} className="mt-2 px-3 md:px-4 py-2 bg-rose-700 hover:bg-rose-600 text-white rounded-xl text-xs md:text-sm font-bold">
-                                Retry Connection
-                            </button>
+                        <div className="container mx-auto px-4 pt-4">
+                            <div className="bg-rose-900/30 border border-rose-700 rounded-2xl p-4 text-center flex items-center justify-center gap-3">
+                                <p className="text-rose-300 font-bold text-sm">⚠️ Cannot connect to server</p>
+                                <button onClick={loadAdminData} className="px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded-xl text-xs font-bold">Retry</button>
+                            </div>
                         </div>
                     )}
 
-                    {/* Price Management */}
-                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 space-y-4 md:space-y-6">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                            <div>
-                                <h2 className="text-xl md:text-2xl font-black text-white">💰 Price Management</h2>
-                                <p className="text-xs md:text-sm text-gray-400 mt-1">Set monthly subscription fee per role</p>
-                            </div>
-                            {!priceEditing ? (
-                                <button onClick={() => { setTempPrices({...rolePrices}); setPriceEditing(true); }}
-                                    className="w-full md:w-auto px-4 md:px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all text-sm">
-                                    ✏️ Edit Prices
-                                </button>
-                            ) : (
-                                <div className="flex gap-2 w-full md:w-auto">
-                                    <button onClick={savePrices}
-                                        className="flex-1 md:flex-none px-4 md:px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all text-sm">
-                                        ✅ Save
-                                    </button>
-                                    <button onClick={() => { setTempPrices({...rolePrices}); setPriceEditing(false); }}
-                                        className="flex-1 md:flex-none px-4 md:px-5 py-2 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-xl transition-all text-sm">
-                                        Cancel
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-                            {[
-                                { role: BusinessRole.DRIVER, label: 'Drivers', icon: '🚗' },
-                                { role: BusinessRole.TRAVEL_AGENT, label: 'Travel Agents', icon: '✈️' },
-                                { role: BusinessRole.SHOPS_HOTELS, label: 'Shops & Hotels', icon: '🏨' }
-                            ].map(({ role, label, icon }) => (
-                                <div key={role} className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4 md:p-5 space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xl md:text-2xl">{icon}</span>
-                                        <span className="font-bold text-white text-xs md:text-sm">{label}</span>
-                                    </div>
-                                    {priceEditing ? (
+                    <div className="container mx-auto px-4 py-6 space-y-6">
+
+                        {/* ══════════ TAB 1: BUSINESS ══════════ */}
+                        {adminTab === 'business' && (
+                            <div className="space-y-6">
+
+                                {/* Price Management */}
+                                <div className="glass-morphism rounded-2xl p-5 md:p-7 space-y-5">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                                         <div>
-                                            <label className="text-xs text-gray-400 mb-1 block">Monthly Fee (₹)</label>
-                                            <input
-                                                type="number"
-                                                value={tempPrices[role]}
-                                                min="1"
-                                                onChange={(e) => setTempPrices(prev => ({ ...prev, [role]: parseInt(e.target.value) || 0 }))}
-                                                className="w-full px-3 py-2 bg-gray-900 border border-indigo-500 rounded-xl text-white text-base md:text-lg font-bold focus:outline-none"
-                                            />
+                                            <h2 className="text-lg font-black text-white">💰 Price Management</h2>
+                                            <p className="text-xs text-gray-400 mt-0.5">Set monthly subscription fee per role</p>
                                         </div>
-                                    ) : (
+                                        {!priceEditing ? (
+                                            <button onClick={() => { setTempPrices({...rolePrices}); setPriceEditing(true); }}
+                                                className="w-full md:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-all">✏️ Edit Prices</button>
+                                        ) : (
+                                            <div className="flex gap-2 w-full md:w-auto">
+                                                <button onClick={savePrices} className="flex-1 md:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-all">✅ Save</button>
+                                                <button onClick={() => { setTempPrices({...rolePrices}); setPriceEditing(false); }} className="flex-1 md:flex-none px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-xl text-sm transition-all">Cancel</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {[
+                                            { role: BusinessRole.DRIVER, label: 'Drivers', icon: '🚗' },
+                                            { role: BusinessRole.TRAVEL_AGENT, label: 'Travel Agents', icon: '✈️' },
+                                            { role: BusinessRole.SHOPS_HOTELS, label: 'Shops & Hotels', icon: '🏨' }
+                                        ].map(({ role, label, icon }) => (
+                                            <div key={role} className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4 space-y-3">
+                                                <div className="flex items-center gap-2"><span className="text-xl">{icon}</span><span className="font-bold text-white text-sm">{label}</span></div>
+                                                {priceEditing ? (
+                                                    <input type="number" value={tempPrices[role]} min="1"
+                                                        onChange={(e) => setTempPrices(prev => ({ ...prev, [role]: parseInt(e.target.value) || 0 }))}
+                                                        className="w-full px-3 py-2 bg-gray-900 border border-indigo-500 rounded-xl text-white text-lg font-bold focus:outline-none" />
+                                                ) : (
+                                                    <div><p className="text-2xl font-black text-white">₹{rolePrices[role].toLocaleString('en-IN')}</p><p className="text-xs text-gray-400">per month</p></div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Subscriber Management */}
+                                <div className="glass-morphism rounded-2xl p-5 md:p-7 space-y-5">
+                                    <h2 className="text-lg font-black text-white">👥 Subscriber Management</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {[
+                                            { role: BusinessRole.DRIVER, label: 'Drivers', icon: '🚗' },
+                                            { role: BusinessRole.TRAVEL_AGENT, label: 'Travel Agents', icon: '✈️' },
+                                            { role: BusinessRole.SHOPS_HOTELS, label: 'Shops & Hotels', icon: '🏨' }
+                                        ].map(({ role, label, icon }) => (
+                                            <div key={role} className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4 space-y-3">
+                                                <div className="flex items-center gap-2"><span className="text-2xl">{icon}</span><h3 className="font-bold text-white text-sm">{label}</h3></div>
+                                                <input type="number" value={subscriberCounts[role]}
+                                                    onChange={(e) => handleUpdateSubscribers(role, parseInt(e.target.value) || 0)}
+                                                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-xl text-white text-xl font-bold focus:border-indigo-500 focus:outline-none" />
+                                                <div>
+                                                    <p className="text-xs text-gray-500">Fee: ₹{rolePrices[role].toLocaleString('en-IN')}/month</p>
+                                                    <p className="text-sm text-gray-300 font-bold">Revenue: {formatCurrency(subscriberCounts[role] * rolePrices[role])}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Live Business Metrics */}
+                                <div className="glass-morphism rounded-2xl p-5 md:p-7 space-y-4">
+                                    <h2 className="text-lg font-black text-white">📈 Live Business Metrics</h2>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <StatCard title="Total Subscribers" value={formatNumber(totalSubscribers)} icon={<span className="text-xl">👥</span>} color="sky" />
+                                        <StatCard title="Monthly Revenue" value={formatCurrency(financials.monthlyRevenue)} icon={<span className="text-xl">💰</span>} color="emerald" />
+                                        <StatCard title="Operating Expenses" value={formatCurrency(financials.expenses)} icon={<span className="text-xl">💸</span>} color="rose" />
+                                        <StatCard title="Net Profit" value={formatCurrency(financials.netProfit)} icon={<span className="text-xl">✨</span>} color="indigo" />
+                                    </div>
+                                </div>
+
+                                {/* Investment Stages */}
+                                <div className="glass-morphism rounded-2xl p-5 md:p-7 space-y-5">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                                         <div>
-                                            <p className="text-xl md:text-2xl font-black text-white">₹{rolePrices[role].toLocaleString('en-IN')}</p>
-                                            <p className="text-xs text-gray-400">per month</p>
+                                            <h2 className="text-lg font-black text-white">🪜 Investment Stages</h2>
+                                            <p className="text-xs text-gray-400 mt-0.5">Manage share price stages</p>
+                                        </div>
+                                        <button onClick={() => setShowAddStage(v => !v)}
+                                            className="w-full md:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-all">
+                                            {showAddStage ? 'Cancel' : '+ Add Stage'}
+                                        </button>
+                                    </div>
+                                    {showAddStage && (
+                                        <div className="bg-gray-800/60 border border-emerald-700 rounded-2xl p-4 space-y-4">
+                                            <h3 className="font-bold text-emerald-300 text-sm">New Stage</h3>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                {[
+                                                    { key: 'stage', label: 'Stage #', type: 'number', placeholder: '4' },
+                                                    { key: 'name', label: 'Stage Name', type: 'text', placeholder: 'e.g. Premium Price' },
+                                                    { key: 'price_per_share', label: 'Price/Share (₹)', type: 'number', placeholder: '1800' },
+                                                    { key: 'shares_available', label: 'Shares Available', type: 'number', placeholder: '100' },
+                                                    { key: 'min_subscribers', label: 'Min Subscribers', type: 'number', placeholder: '15001' },
+                                                    { key: 'max_subscribers', label: 'Max Subscribers', type: 'number', placeholder: '50000' }
+                                                ].map(f => (
+                                                    <div key={f.key}>
+                                                        <label className="text-xs text-gray-400 block mb-1">{f.label}</label>
+                                                        <input type={f.type} placeholder={f.placeholder} value={newStageData[f.key]}
+                                                            onChange={e => setNewStageData(p => ({ ...p, [f.key]: e.target.value }))}
+                                                            className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:border-emerald-500 focus:outline-none" />
+                                                    </div>
+                                                ))}
+                                                <div>
+                                                    <label className="text-xs text-gray-400 block mb-1">Status</label>
+                                                    <select value={newStageData.status} onChange={e => setNewStageData(p => ({ ...p, status: e.target.value }))}
+                                                        className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:border-emerald-500 focus:outline-none">
+                                                        <option value="UPCOMING">UPCOMING</option>
+                                                        <option value="RUNNING">RUNNING</option>
+                                                        <option value="SOLD_OUT">SOLD_OUT</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <button onClick={handleAddStage} disabled={stageActionLoading}
+                                                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm disabled:opacity-50">
+                                                {stageActionLoading ? 'Saving...' : '✅ Add Stage'}
+                                            </button>
                                         </div>
                                     )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Subscriber Management */}
-                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 space-y-4 md:space-y-6">
-                        <h2 className="text-xl md:text-2xl font-black text-white">Subscriber Management</h2>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
-                            {[
-                                { role: BusinessRole.DRIVER, label: 'Drivers', icon: '🚗' },
-                                { role: BusinessRole.TRAVEL_AGENT, label: 'Travel Agents', icon: '✈️' },
-                                { role: BusinessRole.SHOPS_HOTELS, label: 'Shops & Hotels', icon: '🏨' }
-                            ].map(({ role, label, icon }) => (
-                                <div key={role} className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4 md:p-6 space-y-3 md:space-y-4">
-                                    <div className="flex items-center gap-2 md:gap-3">
-                                        <span className="text-2xl md:text-3xl">{icon}</span>
-                                        <h3 className="font-bold text-white text-sm md:text-base">{label}</h3>
+                                    <div className="overflow-x-auto -mx-4 md:mx-0">
+                                        <table className="w-full min-w-[700px]">
+                                            <thead>
+                                                <tr className="border-b border-gray-700">
+                                                    <th className="text-left py-3 px-3 text-gray-400 font-bold text-xs">Stage</th>
+                                                    <th className="text-left py-3 px-3 text-gray-400 font-bold text-xs">Name</th>
+                                                    <th className="text-right py-3 px-3 text-gray-400 font-bold text-xs">Price/Share</th>
+                                                    <th className="text-right py-3 px-3 text-gray-400 font-bold text-xs">Shares Avail.</th>
+                                                    <th className="text-center py-3 px-3 text-gray-400 font-bold text-xs">Status</th>
+                                                    <th className="text-center py-3 px-3 text-gray-400 font-bold text-xs">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {stages.map(s => (
+                                                    <tr key={s.id} className="border-b border-gray-800">
+                                                        {stageEditing === s.id ? (
+                                                            <>
+                                                                <td className="py-2 px-3 text-white font-bold text-sm">#{s.stage}</td>
+                                                                <td className="py-2 px-3"><input value={stageTempData.name ?? s.name} onChange={e => setStageTempData(p => ({ ...p, name: e.target.value }))} className="w-full px-2 py-1 bg-gray-900 border border-indigo-500 rounded-lg text-white text-xs focus:outline-none" /></td>
+                                                                <td className="py-2 px-3"><input type="number" value={stageTempData.price_per_share ?? s.price_per_share} onChange={e => setStageTempData(p => ({ ...p, price_per_share: e.target.value }))} className="w-full px-2 py-1 bg-gray-900 border border-indigo-500 rounded-lg text-white text-xs focus:outline-none" /></td>
+                                                                <td className="py-2 px-3"><input type="number" value={stageTempData.shares_available ?? s.shares_available} onChange={e => setStageTempData(p => ({ ...p, shares_available: e.target.value }))} className="w-full px-2 py-1 bg-gray-900 border border-indigo-500 rounded-lg text-white text-xs focus:outline-none" /></td>
+                                                                <td className="py-2 px-3">
+                                                                    <select value={stageTempData.status ?? s.status} onChange={e => setStageTempData(p => ({ ...p, status: e.target.value }))} className="w-full px-2 py-1 bg-gray-900 border border-indigo-500 rounded-lg text-white text-xs focus:outline-none">
+                                                                        <option value="UPCOMING">UPCOMING</option>
+                                                                        <option value="RUNNING">RUNNING</option>
+                                                                        <option value="SOLD_OUT">SOLD_OUT</option>
+                                                                    </select>
+                                                                </td>
+                                                                <td className="py-2 px-3 text-center">
+                                                                    <div className="flex gap-1 justify-center">
+                                                                        <button onClick={() => handleSaveStage(s.id)} disabled={stageActionLoading} className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold disabled:opacity-50">{stageActionLoading ? '⏳' : '✅'}</button>
+                                                                        <button onClick={() => setStageEditing(null)} className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-xs font-bold">✕</button>
+                                                                    </div>
+                                                                </td>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <td className="py-3 px-3 text-white font-bold text-sm">#{s.stage}</td>
+                                                                <td className="py-3 px-3 text-white text-sm">{s.name}</td>
+                                                                <td className="py-3 px-3 text-right text-emerald-400 font-bold text-sm">₹{Number(s.price_per_share).toLocaleString('en-IN')}</td>
+                                                                <td className="py-3 px-3 text-right text-gray-300 text-sm">{s.shares_available}</td>
+                                                                <td className="py-3 px-3 text-center">
+                                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${s.status === 'RUNNING' ? 'bg-emerald-900/60 text-emerald-300' : s.status === 'SOLD_OUT' ? 'bg-rose-900/60 text-rose-300' : 'bg-amber-900/60 text-amber-300'}`}>{s.status}</span>
+                                                                </td>
+                                                                <td className="py-3 px-3 text-center">
+                                                                    <button onClick={() => { setStageEditing(s.id); setStageTempData({ name: s.name, price_per_share: s.price_per_share, shares_available: s.shares_available, status: s.status }); }}
+                                                                        className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all">✏️ Edit</button>
+                                                                </td>
+                                                            </>
+                                                        )}
+                                                    </tr>
+                                                ))}
+                                                {stages.length === 0 && <tr><td colSpan="6" className="py-8 text-center text-gray-500 text-sm">No stages found</td></tr>}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    
-                                    <input
-                                        type="number"
-                                        value={subscriberCounts[role]}
-                                        onChange={(e) => handleUpdateSubscribers(role, parseInt(e.target.value) || 0)}
-                                        className="w-full px-3 md:px-4 py-2 md:py-3 bg-gray-900 border border-gray-700 rounded-xl text-white text-base md:text-xl font-bold focus:border-indigo-500 focus:outline-none"
-                                    />
-                                    
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] md:text-xs text-gray-500">Fee: ₹{rolePrices[role].toLocaleString('en-IN')}/month</p>
-                                        <p className="text-xs md:text-sm text-gray-400 font-bold">
-                                            Revenue: {formatCurrency(subscriberCounts[role] * rolePrices[role])}
-                                        </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ══════════ TAB 2: DIVIDENDS ══════════ */}
+                        {adminTab === 'dividends' && (
+                            <div className="glass-morphism rounded-2xl p-5 md:p-7 space-y-5">
+                                <div>
+                                    <h2 className="text-lg font-black text-white">💸 Dividend Management</h2>
+                                    <p className="text-xs text-gray-400 mt-0.5">Record payments — they appear instantly in each shareholder's Dividend History</p>
+                                </div>
+                                {/* Mode toggle */}
+                                <div className="flex flex-wrap gap-2">
+                                    <button onClick={() => setDividendMode('single')}
+                                        className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${dividendMode === 'single' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+                                        👤 Pay One Shareholder
+                                    </button>
+                                    <button onClick={() => setDividendMode('all')}
+                                        className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${dividendMode === 'all' ? 'bg-emerald-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+                                        👥 Auto-Pay All (by share %)
+                                    </button>
+                                </div>
+                                <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4 md:p-6 space-y-4">
+                                    {dividendMode === 'single' && (
+                                        <div>
+                                            <label className="text-xs text-gray-400 block mb-1">Shareholder</label>
+                                            <select value={dividendSH} onChange={e => setDividendSH(e.target.value)}
+                                                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none">
+                                                <option value="">— Select Shareholder —</option>
+                                                {(adminData?.agreements || []).filter(a => a.status === 'APPROVED').map(a => (
+                                                    <option key={a.id} value={a.id}>{a.full_name} ({a.num_shares} shares)</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                    {dividendMode === 'all' && (
+                                        <div className="bg-emerald-900/20 border border-emerald-700 rounded-xl p-3 text-xs text-emerald-300">
+                                            ℹ️ Auto-calculates each approved shareholder's dividend based on their share % and records it for all at once.
+                                        </div>
+                                    )}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="text-xs text-gray-400 block mb-1">{dividendMode === 'all' ? 'Total Net Profit to Distribute (₹)' : 'Dividend Amount (₹)'}</label>
+                                            <input type="number" min="1" placeholder={dividendMode === 'all' ? 'e.g. 50000' : 'e.g. 1200'}
+                                                value={dividendAmount} onChange={e => setDividendAmount(e.target.value)}
+                                                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none" />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-400 block mb-1">GST % <span className="text-gray-500">(0 = no tax)</span></label>
+                                            <div className="flex gap-2">
+                                                <input type="number" min="0" max="100" step="0.5" placeholder="e.g. 18"
+                                                    value={dividendGst} onChange={e => setDividendGst(e.target.value)}
+                                                    className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:border-amber-500 focus:outline-none" />
+                                                <div className="flex flex-col gap-1">
+                                                    {[0, 5, 12, 18, 28].map(g => (
+                                                        <button key={g} onClick={() => setDividendGst(String(g))}
+                                                            className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${Number(dividendGst) === g ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}>
+                                                            {g}%
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-400 block mb-1">Month</label>
+                                            <input type="month" value={dividendMonth} onChange={e => setDividendMonth(e.target.value)}
+                                                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none" />
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Financial Overview */}
-                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 space-y-4 md:space-y-6">
-                        <h2 className="text-xl md:text-2xl font-black text-white">Live Business Metrics</h2>
-
-                        {/* Summary totals */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                            <StatCard
-                                title="Total Subscribers"
-                                value={formatNumber(totalSubscribers)}
-                                icon={<span className="text-xl md:text-2xl">👥</span>}
-                                color="sky"
-                            />
-                            <StatCard
-                                title="Monthly Revenue"
-                                value={formatCurrency(financials.monthlyRevenue)}
-                                icon={<span className="text-xl md:text-2xl">💰</span>}
-                                color="emerald"
-                            />
-                            <StatCard
-                                title="Operating Expenses"
-                                value={formatCurrency(financials.expenses)}
-                                icon={<span className="text-xl md:text-2xl">💸</span>}
-                                color="rose"
-                            />
-                            <StatCard
-                                title="Net Profit"
-                                value={formatCurrency(financials.netProfit)}
-                                icon={<span className="text-xl md:text-2xl">✨</span>}
-                                color="indigo"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Dividend Management */}
-                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 space-y-4 md:space-y-6">
-                        <div>
-                            <h2 className="text-xl md:text-2xl font-black text-white">💸 Dividend Management</h2>
-                            <p className="text-xs md:text-sm text-gray-400 mt-1">Record dividend payments — they appear in each shareholder's Dividend History</p>
-                        </div>
-
-                        {/* Mode toggle */}
-                        <div className="flex gap-2">
-                            <button onClick={() => setDividendMode('single')}
-                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${dividendMode === 'single' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
-                                👤 Pay One Shareholder
-                            </button>
-                            <button onClick={() => setDividendMode('all')}
-                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${dividendMode === 'all' ? 'bg-emerald-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
-                                👥 Auto-Pay All (by share %)
-                            </button>
-                        </div>
-
-                        <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4 md:p-6 space-y-4">
-                            {dividendMode === 'single' && (
-                                <div>
-                                    <label className="text-xs text-gray-400 block mb-1">Shareholder</label>
-                                    <select value={dividendSH} onChange={e => setDividendSH(e.target.value)}
-                                        className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none">
-                                        <option value="">— Select Shareholder —</option>
-                                        {(adminData?.agreements || []).filter(a => a.status === 'APPROVED').map(a => (
-                                            <option key={a.id} value={a.id}>{a.full_name} ({a.num_shares} shares)</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-                            {dividendMode === 'all' && (
-                                <div className="bg-emerald-900/20 border border-emerald-700 rounded-xl p-3 text-xs text-emerald-300">
-                                    ℹ️ This will auto-calculate each approved shareholder's dividend based on their share percentage of the net profit you enter below, and record it for all of them at once.
-                                </div>
-                            )}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="text-xs text-gray-400 block mb-1">
-                                        {dividendMode === 'all' ? 'Total Net Profit to Distribute (₹)' : 'Dividend Amount (₹)'}
-                                    </label>
-                                    <input type="number" min="1" placeholder={dividendMode === 'all' ? 'e.g. 50000' : 'e.g. 1200'}
-                                        value={dividendAmount} onChange={e => setDividendAmount(e.target.value)}
-                                        className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none" />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-gray-400 block mb-1">GST % <span className="text-gray-500">(optional — 0 = no tax)</span></label>
-                                    <div className="flex gap-2">
-                                        <input type="number" min="0" max="100" step="0.5" placeholder="e.g. 18"
-                                            value={dividendGst} onChange={e => setDividendGst(e.target.value)}
-                                            className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:border-amber-500 focus:outline-none" />
-                                        <div className="flex flex-col gap-1">
-                                            {[0, 5, 12, 18, 28].map(g => (
-                                                <button key={g} onClick={() => setDividendGst(String(g))}
-                                                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${Number(dividendGst) === g ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}>
-                                                    {g}%
+                                    <div>
+                                        <label className="text-xs text-gray-400 block mb-2">Payment Method</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['Bank Transfer', 'UPI', 'Cheque', 'Cash', 'NEFT/RTGS'].map(m => (
+                                                <button key={m} onClick={() => setDividendPaymentMethod(m)}
+                                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${dividendPaymentMethod === m ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-gray-800 border-gray-600 text-gray-400 hover:border-indigo-500 hover:text-white'}`}>
+                                                    {m === 'Bank Transfer' ? '🏦' : m === 'UPI' ? '📱' : m === 'Cheque' ? '📄' : m === 'Cash' ? '💵' : '🔁'} {m}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="text-xs text-gray-400 block mb-1">Month (YYYY-MM)</label>
-                                    <input type="month" value={dividendMonth} onChange={e => setDividendMonth(e.target.value)}
-                                        className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-xs text-gray-400 block mb-1">Payment Method</label>
-                                <div className="flex flex-wrap gap-2">
-                                    {['Bank Transfer', 'UPI', 'Cheque', 'Cash', 'NEFT/RTGS'].map(m => (
-                                        <button key={m} onClick={() => setDividendPaymentMethod(m)}
-                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${dividendPaymentMethod === m ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-gray-800 border-gray-600 text-gray-400 hover:border-indigo-500 hover:text-white'}`}>
-                                            {m === 'Bank Transfer' ? '🏦' : m === 'UPI' ? '📱' : m === 'Cheque' ? '📄' : m === 'Cash' ? '💵' : '🔁'} {m}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Live breakdown preview */}
-                            {dividendAmount && Number(dividendAmount) > 0 && (() => {
-                                const gross = Number(dividendAmount);
-                                const gst = Math.max(0, Number(dividendGst) || 0);
-                                const gstAmt = Math.round(gross * gst / 100 * 100) / 100;
-                                const net = Math.round((gross - gstAmt) * 100) / 100;
-                                return (
-                                    <div className="bg-gray-900/60 border border-amber-700/50 rounded-xl p-3 md:p-4">
-                                        <p className="text-xs text-amber-400 font-bold mb-2">📊 Breakdown Preview</p>
-                                        <div className="grid grid-cols-3 gap-2 text-center">
-                                            <div className="bg-gray-800 rounded-lg p-2">
-                                                <p className="text-[10px] text-gray-400">Gross Amount</p>
-                                                <p className="text-sm font-black text-white">₹{gross.toLocaleString('en-IN')}</p>
-                                            </div>
-                                            <div className="bg-rose-900/30 rounded-lg p-2 border border-rose-800">
-                                                <p className="text-[10px] text-rose-400">GST {gst}% Deducted</p>
-                                                <p className="text-sm font-black text-rose-300">−₹{gstAmt.toLocaleString('en-IN')}</p>
-                                            </div>
-                                            <div className="bg-emerald-900/30 rounded-lg p-2 border border-emerald-800">
-                                                <p className="text-[10px] text-emerald-400">Net Paid to Shareholder</p>
-                                                <p className="text-sm font-black text-emerald-300">₹{net.toLocaleString('en-IN')}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-                            <button onClick={handlePayDividend} disabled={dividendLoading}
-                                className="w-full md:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                                {dividendLoading ? '⏳ Processing...' : dividendMode === 'all' ? '✅ Pay All Shareholders' : '✅ Record Dividend Payment'}
-                            </button>
-                        </div>
-
-                        {/* Activity log */}
-                        {dividendLog.length > 0 && (
-                            <div className="space-y-2">
-                                <p className="text-xs text-gray-400 font-bold">Recent Actions (this session):</p>
-                                {dividendLog.map((log, i) => (
-                                    <div key={i} className="bg-emerald-900/20 border border-emerald-800 rounded-xl px-3 py-2 text-xs text-emerald-300">{log}</div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Investment Stages Management */}
-                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 space-y-4 md:space-y-6">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                            <div>
-                                <h2 className="text-xl md:text-2xl font-black text-white">📈 Investment Stages</h2>
-                                <p className="text-xs md:text-sm text-gray-400 mt-1">Manage share price stages — set status & price</p>
-                            </div>
-                            <button
-                                onClick={() => setShowAddStage(v => !v)}
-                                className="w-full md:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all text-sm"
-                            >
-                                {showAddStage ? 'Cancel' : '+ Add Stage'}
-                            </button>
-                        </div>
-
-                        {/* Add Stage Form */}
-                        {showAddStage && (
-                            <div className="bg-gray-800/60 border border-emerald-700 rounded-2xl p-4 md:p-6 space-y-4">
-                                <h3 className="font-bold text-emerald-300 text-sm">New Stage</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    {[
-                                        { key: 'stage', label: 'Stage #', type: 'number', placeholder: '4' },
-                                        { key: 'name', label: 'Stage Name', type: 'text', placeholder: 'e.g. Premium Price' },
-                                        { key: 'price_per_share', label: 'Price/Share (₹)', type: 'number', placeholder: '1800' },
-                                        { key: 'shares_available', label: 'Shares Available', type: 'number', placeholder: '100' },
-                                        { key: 'min_subscribers', label: 'Min Subscribers', type: 'number', placeholder: '15001' },
-                                        { key: 'max_subscribers', label: 'Max Subscribers', type: 'number', placeholder: '50000' }
-                                    ].map(f => (
-                                        <div key={f.key}>
-                                            <label className="text-xs text-gray-400 block mb-1">{f.label}</label>
-                                            <input type={f.type} placeholder={f.placeholder} value={newStageData[f.key]}
-                                                onChange={e => setNewStageData(p => ({ ...p, [f.key]: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:border-emerald-500 focus:outline-none" />
-                                        </div>
-                                    ))}
-                                    <div>
-                                        <label className="text-xs text-gray-400 block mb-1">Status</label>
-                                        <select value={newStageData.status} onChange={e => setNewStageData(p => ({ ...p, status: e.target.value }))}
-                                            className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-xl text-white text-sm focus:border-emerald-500 focus:outline-none">
-                                            <option value="UPCOMING">UPCOMING</option>
-                                            <option value="RUNNING">RUNNING</option>
-                                            <option value="SOLD_OUT">SOLD_OUT</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <button onClick={handleAddStage} disabled={stageActionLoading}
-                                    className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all text-sm disabled:opacity-50">
-                                    {stageActionLoading ? 'Saving...' : '✅ Add Stage'}
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Stages Table */}
-                        <div className="overflow-x-auto -mx-4 md:mx-0">
-                            <table className="w-full min-w-[700px]">
-                                <thead>
-                                    <tr className="border-b border-gray-700">
-                                        <th className="text-left py-3 px-3 text-gray-400 font-bold text-xs">Stage</th>
-                                        <th className="text-left py-3 px-3 text-gray-400 font-bold text-xs">Name</th>
-                                        <th className="text-right py-3 px-3 text-gray-400 font-bold text-xs">Price/Share</th>
-                                        <th className="text-right py-3 px-3 text-gray-400 font-bold text-xs">Shares Avail.</th>
-                                        <th className="text-center py-3 px-3 text-gray-400 font-bold text-xs">Status</th>
-                                        <th className="text-center py-3 px-3 text-gray-400 font-bold text-xs">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {stages.map(s => (
-                                        <tr key={s.id} className="border-b border-gray-800">
-                                            {stageEditing === s.id ? (
-                                                <>
-                                                    <td className="py-2 px-3 text-white font-bold text-sm">#{s.stage}</td>
-                                                    <td className="py-2 px-3">
-                                                        <input value={stageTempData.name ?? s.name}
-                                                            onChange={e => setStageTempData(p => ({ ...p, name: e.target.value }))}
-                                                            className="w-full px-2 py-1 bg-gray-900 border border-indigo-500 rounded-lg text-white text-xs focus:outline-none" />
-                                                    </td>
-                                                    <td className="py-2 px-3">
-                                                        <input type="number" value={stageTempData.price_per_share ?? s.price_per_share}
-                                                            onChange={e => setStageTempData(p => ({ ...p, price_per_share: e.target.value }))}
-                                                            className="w-full px-2 py-1 bg-gray-900 border border-indigo-500 rounded-lg text-white text-xs focus:outline-none" />
-                                                    </td>
-                                                    <td className="py-2 px-3">
-                                                        <input type="number" value={stageTempData.shares_available ?? s.shares_available}
-                                                            onChange={e => setStageTempData(p => ({ ...p, shares_available: e.target.value }))}
-                                                            className="w-full px-2 py-1 bg-gray-900 border border-indigo-500 rounded-lg text-white text-xs focus:outline-none" />
-                                                    </td>
-                                                    <td className="py-2 px-3">
-                                                        <select value={stageTempData.status ?? s.status}
-                                                            onChange={e => setStageTempData(p => ({ ...p, status: e.target.value }))}
-                                                            className="w-full px-2 py-1 bg-gray-900 border border-indigo-500 rounded-lg text-white text-xs focus:outline-none">
-                                                            <option value="RUNNING">RUNNING</option>
-                                                            <option value="UPCOMING">UPCOMING</option>
-                                                            <option value="SOLD_OUT">SOLD_OUT</option>
-                                                        </select>
-                                                    </td>
-                                                    <td className="py-2 px-3">
-                                                        <div className="flex gap-1 justify-center">
-                                                            <button onClick={() => handleSaveStage(s.id)} disabled={stageActionLoading}
-                                                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50">
-                                                                {stageActionLoading ? '⏳' : '✅'}
-                                                            </button>
-                                                            <button onClick={() => setStageEditing(null)}
-                                                                className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-xs font-bold transition-all">
-                                                                ✕
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <td className="py-3 px-3 text-white font-bold text-sm">#{s.stage}</td>
-                                                    <td className="py-3 px-3 text-white text-sm">{s.name}</td>
-                                                    <td className="py-3 px-3 text-right text-emerald-400 font-bold text-sm">₹{Number(s.price_per_share).toLocaleString('en-IN')}</td>
-                                                    <td className="py-3 px-3 text-right text-gray-300 text-sm">{s.shares_available}</td>
-                                                    <td className="py-3 px-3 text-center">
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                                            s.status === 'RUNNING' ? 'bg-emerald-900/60 text-emerald-300' :
-                                                            s.status === 'SOLD_OUT' ? 'bg-rose-900/60 text-rose-300' :
-                                                            'bg-amber-900/60 text-amber-300'
-                                                        }`}>{s.status}</span>
-                                                    </td>
-                                                    <td className="py-3 px-3 text-center">
-                                                        <button onClick={() => { setStageEditing(s.id); setStageTempData({ name: s.name, price_per_share: s.price_per_share, shares_available: s.shares_available, status: s.status }); }}
-                                                            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all">
-                                                            ✏️ Edit
-                                                        </button>
-                                                    </td>
-                                                </>
-                                            )}
-                                        </tr>
-                                    ))}
-                                    {stages.length === 0 && (
-                                        <tr><td colSpan="6" className="py-8 text-center text-gray-500 text-sm">No stages found</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* Pending Agreements */}
-                    <div className="glass-morphism rounded-2xl md:rounded-3xl p-4 md:p-8 space-y-4 md:space-y-6">
-                        <h2 className="text-xl md:text-2xl font-black text-white">Investor Agreements</h2>
-                        
-                        <div className="overflow-x-auto -mx-4 md:mx-0">
-                            <table className="w-full min-w-[800px]">
-                                <thead>
-                                    <tr className="border-b border-gray-700">
-                                        <th className="text-left py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Name</th>
-                                        <th className="text-right py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Shares</th>
-                                        <th className="text-right py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Investment</th>
-                                        <th className="text-center py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Status</th>
-                                        <th className="text-center py-3 px-2 md:px-4 text-gray-400 font-bold text-xs md:text-sm">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {adminData.agreements?.map((agreement) => (
-                                        <tr key={agreement.id} className="border-b border-gray-800">
-                                            <td className="py-3 px-2 md:px-4">
-                                                <div className="flex items-center gap-2 md:gap-3">
-                                                    {agreement.photo_data && (
-                                                        <img 
-                                                            src={agreement.photo_data} 
-                                                            alt={agreement.full_name}
-                                                            className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border-2 border-gray-700"
-                                                        />
-                                                    )}
-                                                    <div>
-                                                        <p className="text-white font-bold text-xs md:text-sm">{agreement.full_name}</p>
-                                                        <p className="text-[10px] md:text-xs text-gray-400">{agreement.email}</p>
+                                    {/* Live breakdown preview */}
+                                    {dividendAmount && Number(dividendAmount) > 0 && (() => {
+                                        const gross = Number(dividendAmount);
+                                        const gst = Math.max(0, Number(dividendGst) || 0);
+                                        const gstAmt = Math.round(gross * gst / 100 * 100) / 100;
+                                        const net = Math.round((gross - gstAmt) * 100) / 100;
+                                        return (
+                                            <div className="bg-gray-900/60 border border-amber-700/50 rounded-xl p-3 md:p-4">
+                                                <p className="text-xs text-amber-400 font-bold mb-2">📊 Breakdown Preview</p>
+                                                <div className="grid grid-cols-3 gap-2 text-center">
+                                                    <div className="bg-gray-800 rounded-lg p-2">
+                                                        <p className="text-[10px] text-gray-400">Gross Amount</p>
+                                                        <p className="text-sm font-black text-white">₹{gross.toLocaleString('en-IN')}</p>
+                                                    </div>
+                                                    <div className="bg-rose-900/30 rounded-lg p-2 border border-rose-800">
+                                                        <p className="text-[10px] text-rose-400">GST {gst}% Deducted</p>
+                                                        <p className="text-sm font-black text-rose-300">−₹{gstAmt.toLocaleString('en-IN')}</p>
+                                                    </div>
+                                                    <div className="bg-emerald-900/30 rounded-lg p-2 border border-emerald-800">
+                                                        <p className="text-[10px] text-emerald-400">Net to Shareholder</p>
+                                                        <p className="text-sm font-black text-emerald-300">₹{net.toLocaleString('en-IN')}</p>
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className="py-3 px-2 md:px-4 text-right text-white font-bold text-xs md:text-sm">
-                                                {agreement.num_shares}
-                                            </td>
-                                            <td className="py-3 px-2 md:px-4 text-right text-emerald-400 font-bold text-xs md:text-sm">
-                                                {formatCurrency(agreement.total_investment)}
-                                            </td>
-                                            <td className="py-3 px-2 md:px-4 text-center">
-                                                <span className={`px-2 md:px-3 py-1 rounded-full text-[10px] md:text-xs font-bold ${
-                                                    agreement.status === AgreementStatus.APPROVED ? 'bg-emerald-900/50 text-emerald-300' :
-                                                    agreement.status === AgreementStatus.REJECTED ? 'bg-rose-900/50 text-rose-300' :
-                                                    'bg-amber-900/50 text-amber-300'
-                                                }`}>
-                                                    {agreement.status}
-                                                </span>
-                                            </td>
-                                            <td className="py-3 px-2 md:px-4">
-                                                <div className="flex gap-1 md:gap-2 justify-center">
-                                                    <button
-                                                        onClick={() => handleViewDetails(agreement.id)}
-                                                        className="px-2 md:px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs md:text-sm font-bold transition-all"
-                                                        title="View Details"
-                                                    >
-                                                        👁️
-                                                    </button>
-                                                    <button
-                                                        onClick={() => { const id = agreement.id; const name = agreement.full_name; handleUpdateAgreement(id, AgreementStatus.APPROVED, name); }}
-                                                        disabled={actionLoading === agreement.id}
-                                                        className="px-2 md:px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs md:text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        title="Approve"
-                                                    >
-                                                        {actionLoading === agreement.id ? '⏳' : '✓'}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => { const id = agreement.id; const name = agreement.full_name; handleUpdateAgreement(id, AgreementStatus.REJECTED, name); }}
-                                                        disabled={actionLoading === agreement.id}
-                                                        className="px-2 md:px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs md:text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        title="Reject"
-                                                    >
-                                                        {actionLoading === agreement.id ? '⏳' : '✕'}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleGeneratePDF(agreement.id)}
-                                                        disabled={generatingPDF === agreement.id}
-                                                        className="px-2 md:px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs md:text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        title="Generate PDF"
-                                                    >
-                                                        {generatingPDF === agreement.id ? '⏳' : '📄'}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setResetCredentialsSH({ id: agreement.id, full_name: agreement.full_name, username: agreement.username })}
-                                                        className="px-2 md:px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs md:text-sm font-bold transition-all"
-                                                        title="Reset Username/Password"
-                                                    >
-                                                        🔑
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteAgreement(agreement.id, agreement.full_name)}
-                                                        disabled={actionLoading === agreement.id}
-                                                        className="px-2 md:px-3 py-1 bg-red-800 hover:bg-red-700 text-white rounded-lg text-xs md:text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        title="Delete Agreement"
-                                                    >
-                                                        {actionLoading === agreement.id ? '⏳' : '🗑️'}
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                            </div>
+                                        );
+                                    })()}
+                                    <button onClick={handlePayDividend} disabled={dividendLoading}
+                                        className="w-full md:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                                        {dividendLoading ? '⏳ Processing...' : dividendMode === 'all' ? '✅ Pay All Shareholders' : '✅ Record Dividend Payment'}
+                                    </button>
+                                </div>
+                                {dividendLog.length > 0 && (
+                                    <div className="space-y-2">
+                                        <p className="text-xs text-gray-400 font-bold">Recent Actions (this session):</p>
+                                        {dividendLog.map((log, i) => (
+                                            <div key={i} className="bg-emerald-900/20 border border-emerald-800 rounded-xl px-3 py-2 text-xs text-emerald-300">{log}</div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ══════════ TAB 3: AGREEMENTS ══════════ */}
+                        {adminTab === 'agreements' && (
+                            <div className="glass-morphism rounded-2xl p-5 md:p-7 space-y-5">
+                                <h2 className="text-lg font-black text-white">📋 Investor Agreements</h2>
+                                <div className="overflow-x-auto -mx-4 md:mx-0">
+                                    <table className="w-full min-w-[800px]">
+                                        <thead>
+                                            <tr className="border-b border-gray-700">
+                                                <th className="text-left py-3 px-3 text-gray-400 font-bold text-xs">Name</th>
+                                                <th className="text-right py-3 px-3 text-gray-400 font-bold text-xs">Shares</th>
+                                                <th className="text-right py-3 px-3 text-gray-400 font-bold text-xs">Investment</th>
+                                                <th className="text-center py-3 px-3 text-gray-400 font-bold text-xs">Status</th>
+                                                <th className="text-center py-3 px-3 text-gray-400 font-bold text-xs">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {adminData.agreements?.map((agreement) => (
+                                                <tr key={agreement.id} className="border-b border-gray-800">
+                                                    <td className="py-3 px-3">
+                                                        <div className="flex items-center gap-2">
+                                                            {agreement.photo_data && <img src={agreement.photo_data} alt={agreement.full_name} className="w-9 h-9 rounded-full object-cover border-2 border-gray-700 flex-shrink-0" />}
+                                                            <div>
+                                                                <p className="text-white font-bold text-xs">{agreement.full_name}</p>
+                                                                <p className="text-[10px] text-gray-400">{agreement.email}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-3 text-right text-white font-bold text-xs">{agreement.num_shares}</td>
+                                                    <td className="py-3 px-3 text-right text-emerald-400 font-bold text-xs">{formatCurrency(agreement.total_investment)}</td>
+                                                    <td className="py-3 px-3 text-center">
+                                                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${agreement.status === AgreementStatus.APPROVED ? 'bg-emerald-900/50 text-emerald-300' : agreement.status === AgreementStatus.REJECTED ? 'bg-rose-900/50 text-rose-300' : 'bg-amber-900/50 text-amber-300'}`}>
+                                                            {agreement.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-3">
+                                                        <div className="flex gap-1 justify-center flex-wrap">
+                                                            <button onClick={() => handleViewDetails(agreement.id)} className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold" title="View">👁️</button>
+                                                            <button onClick={() => { const id = agreement.id; const name = agreement.full_name; handleUpdateAgreement(id, AgreementStatus.APPROVED, name); }} disabled={actionLoading === agreement.id} className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold disabled:opacity-50" title="Approve">{actionLoading === agreement.id ? '⏳' : '✓'}</button>
+                                                            <button onClick={() => { const id = agreement.id; const name = agreement.full_name; handleUpdateAgreement(id, AgreementStatus.REJECTED, name); }} disabled={actionLoading === agreement.id} className="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold disabled:opacity-50" title="Reject">{actionLoading === agreement.id ? '⏳' : '✕'}</button>
+                                                            <button onClick={() => handleGeneratePDF(agreement.id)} disabled={generatingPDF === agreement.id} className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold disabled:opacity-50" title="PDF">{generatingPDF === agreement.id ? '⏳' : '📄'}</button>
+                                                            <button onClick={() => setResetCredentialsSH({ id: agreement.id, full_name: agreement.full_name, username: agreement.username })} className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold" title="Reset credentials">🔑</button>
+                                                            <button onClick={() => handleDeleteAgreement(agreement.id, agreement.full_name)} disabled={actionLoading === agreement.id} className="px-2 py-1 bg-red-800 hover:bg-red-700 text-white rounded-lg text-xs font-bold disabled:opacity-50" title="Delete">{actionLoading === agreement.id ? '⏳' : '🗑️'}</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
 
-                    {/* Shareholder Details Modal */}
+                    {/* Modals */}
                     {selectedShareholder && (
-                        <ShareholderDetailsModal
-                            shareholderId={selectedShareholder}
-                            onClose={() => setSelectedShareholder(null)}
-                        />
+                        <ShareholderDetailsModal shareholderId={selectedShareholder} onClose={() => setSelectedShareholder(null)} />
                     )}
-
-                    {/* Reset Credentials Modal */}
                     {resetCredentialsSH && (
-                        <ResetCredentialsModal
-                            shareholder={resetCredentialsSH}
-                            onClose={() => setResetCredentialsSH(null)}
-                            onSuccess={loadAdminData}
-                        />
+                        <ResetCredentialsModal shareholder={resetCredentialsSH} onClose={() => setResetCredentialsSH(null)} onSuccess={loadAdminData} />
                     )}
                 </div>
             );
