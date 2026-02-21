@@ -988,6 +988,14 @@
                                     </div>
                                 </div>
 
+                                {/* Legal Disclaimer & Risk Disclosure */}
+                                <div className="mt-4 bg-gray-900/60 border border-rose-800/50 rounded-xl p-4 md:p-5 space-y-1">
+                                    <h5 className="font-black text-rose-300 flex items-center gap-2 mb-3">
+                                        <span>⚖️</span> Legal Disclaimer &amp; Risk Disclosure
+                                    </h5>
+                                    <LegalDisclaimerBody />
+                                </div>
+
                                 <label className="flex items-start gap-3 cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -996,7 +1004,7 @@
                                         className="mt-1 w-5 h-5 rounded border-gray-700 bg-gray-800 text-indigo-600 focus:ring-indigo-500"
                                     />
                                     <span className="text-sm text-gray-300">
-                                        I have read and understood the investment risks and company terms. I agree to all terms and conditions and confirm that all information provided is accurate.
+                                        I have read and understood the investment risks, company terms, and the Legal Disclaimer &amp; Risk Disclosure above. I agree to all terms and conditions and confirm that all information provided is accurate.
                                     </span>
                                 </label>
                                 {errors.agreeToRisks && <p className="text-rose-400 text-xs">{errors.agreeToRisks}</p>}
@@ -1269,7 +1277,99 @@
                             </div>
                         </div>
                     </div>
+
+                    {/* Disclaimer Section */}
+                    <FrontPageDisclaimer />
                 </div>
+            );
+        };
+
+        // Legal Disclaimer Full Content
+        const LEGAL_DISCLAIMER_CONTENT = {
+            title: "Legal Disclaimer & Risk Disclosure",
+            paragraphs: [
+                "This opportunity is a private contractual business participation arrangement offered and managed solely by Quick Ride.",
+                "Quick Ride is not registered with, regulated by, or affiliated with the Securities and Exchange Board of India (SEBI) or any other governmental, statutory, or financial regulatory authority in India or abroad in relation to this participation model."
+            ],
+            offeringLabel: "This offering:",
+            offeringPoints: [
+                "Is not an Initial Public Offering (IPO)",
+                "Is not publicly listed, exchange-traded, or transferable",
+                "Does not constitute shares, securities, debentures, collective investment schemes, deposits, mutual funds, or any regulated financial instrument under applicable law",
+                "Is a private internal profit-participation arrangement"
+            ],
+            closingParagraphs: [
+                "All funds contributed are managed, utilized, and controlled exclusively by Quick Ride under its independent internal business framework.",
+                "The term \"share\" or similar references, if used, are purely representational accounting units created for transparent profit allocation purposes. They do not confer legal ownership, equity rights, voting rights, partnership rights, or statutory shareholder status unless separately documented under applicable corporate law."
+            ]
+        };
+
+        // Reusable Legal Disclaimer Body (used in popup and form)
+        const LegalDisclaimerBody = () => (
+            <div className="space-y-4 text-sm text-gray-300 leading-relaxed">
+                {LEGAL_DISCLAIMER_CONTENT.paragraphs.map((p, i) => (
+                    <p key={i}>{p}</p>
+                ))}
+                <div>
+                    <p className="font-semibold text-white mb-2">{LEGAL_DISCLAIMER_CONTENT.offeringLabel}</p>
+                    <ul className="space-y-1.5 list-none">
+                        {LEGAL_DISCLAIMER_CONTENT.offeringPoints.map((point, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                                <span className="text-rose-400 mt-0.5 flex-shrink-0">✕</span>
+                                <span>{point}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                {LEGAL_DISCLAIMER_CONTENT.closingParagraphs.map((p, i) => (
+                    <p key={i}>{p}</p>
+                ))}
+            </div>
+        );
+
+        // Front Page Disclaimer bar + popup
+        const FrontPageDisclaimer = () => {
+            const [showModal, setShowModal] = React.useState(false);
+            return (
+                <>
+                    {/* Disclaimer bar */}
+                    <div className="border-t border-white/10 bg-black/30">
+                        <div className="container mx-auto px-4 md:px-8 py-5 flex flex-col md:flex-row items-start md:items-center gap-3">
+                            <p className="text-gray-400 text-xs md:text-sm leading-relaxed flex-1">
+                                <span className="font-bold text-gray-300">Disclaimer:</span> This investment is not affiliated with or regulated by the Securities and Exchange Board of India (SEBI). All investment activities and related monetary accounts are independently managed and controlled by Quick Ride.
+                            </p>
+                            <button
+                                onClick={() => setShowModal(true)}
+                                className="flex-shrink-0 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold rounded-xl transition-all whitespace-nowrap"
+                            >
+                                Read More
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Popup Modal */}
+                    {showModal && (
+                        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="glass-morphism rounded-3xl p-6 md:p-8 max-w-2xl w-full relative max-h-[85vh] flex flex-col">
+                                <div className="modal-close-btn" onClick={() => setShowModal(false)}>×</div>
+                                <h2 className="text-xl md:text-2xl font-black text-white mb-5 pr-12 flex items-center gap-2">
+                                    <span>⚖️</span> {LEGAL_DISCLAIMER_CONTENT.title}
+                                </h2>
+                                <div className="overflow-y-auto flex-1 pr-1">
+                                    <LegalDisclaimerBody />
+                                </div>
+                                <div className="pt-5 mt-4 border-t border-gray-700">
+                                    <button
+                                        onClick={() => setShowModal(false)}
+                                        className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all text-sm"
+                                    >
+                                        I Understand
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
             );
         };
 
@@ -2032,7 +2132,7 @@
                                     <p className="font-bold text-gray-400">📌 Important Notes</p>
                                     <p>• Dividends are paid at the discretion of Quick Ride management (quarterly or annually).</p>
                                     <p>• GST, if applicable, is deducted from the gross amount before payment.</p>
-                                    <p>• For any discrepancy, contact quickcab2026@gmail.com with your Shareholder ID.</p>
+                                    <p>• For any discrepancy, contact quickridesk@gmail.com with your Shareholder ID.</p>
                                 </div>
                             </div>
                         )}
@@ -2074,7 +2174,7 @@
                                     </h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {[
-                                            { icon: '📧', label: 'Email', value: 'quickcab2026@gmail.com' },
+                                            { icon: '📧', label: 'Email', value: 'quickridesk@gmail.com' },
                                             { icon: '📍', label: 'Office', value: 'Burtuk, Helipad Gangtok, 737101, Sikkim' },
                                             { icon: '📞', label: 'Phone 1', value: '+91 9932369890' },
                                             { icon: '📞', label: 'Phone 2', value: '+91 7001258960' },
@@ -2418,9 +2518,9 @@
                         {/* Tab bar */}
                         <div className="container mx-auto px-4 flex gap-1 overflow-x-auto pb-0">
                             {[
-                                { id: 'business', label: 'Overview & Metrics', icon: '💰' },
-                                { id: 'dividends', label: 'Dividend Management', icon: '💸' },
-                                { id: 'agreements', label: 'Investor Agreements', icon: '📋' },
+                                { id: 'business', label: 'Business', icon: '📊' },
+                                { id: 'dividends', label: 'Dividends', icon: '💸' },
+                                { id: 'agreements', label: 'Agreements', icon: '📋' },
                             ].map(t => (
                                 <button key={t.id} onClick={() => setAdminTab(t.id)}
                                     className={`flex items-center gap-1.5 px-4 py-2.5 text-xs md:text-sm font-bold border-b-2 transition-all whitespace-nowrap ${adminTab === t.id ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
@@ -2817,8 +2917,8 @@
                                 <h3 className="font-bold text-white text-base md:text-lg">📍 Quick Ride Office</h3>
                                 <p className="text-gray-400 text-xs md:text-sm">
                                     Burtuk, Helipad Gangtok<br />
-                                    737101<br />
-                                    East District, Sikkim
+                                    East District, Sikkim<br />
+                                    737101
                                 </p>
                             </div>
 
@@ -2828,7 +2928,7 @@
                                 <p className="text-gray-400 text-xs md:text-sm">
                                     +91 9932369890<br /> 
 									+91 7001258960<br /> 
-                                    Email: quickcab2026@gmail.com
+                                    Email: quickridesk@gmail.com
                                 </p>
                             </div>
 

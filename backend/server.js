@@ -489,7 +489,7 @@ app.post('/api/admin/agreements/:id/pdf', async (req, res) => {
         cy+=sigPanelH+10;
 
         ensureSpace(16);
-        doc.fontSize(7).font('Helvetica').fillColor('#6b7280').text('Quick Ride Office: Burtuk, Helipad Gangtok, 737101, East District, Sikkim  |  Phone: +91 9932369890  |  Email: quickcab2026@gmail.com',M,cy,{width:CW,align:'center',lineBreak:false});
+        doc.fontSize(7).font('Helvetica').fillColor('#6b7280').text('Quick Ride Office: Burtuk, Helipad Gangtok, 737101, East District, Sikkim  |  Phone: +91 9932369890  |  Email: quickridesk@gmail.com',M,cy,{width:CW,align:'center',lineBreak:false});
         cy+=14; drawFooter(); doc.end();
 
     } catch (err) {
